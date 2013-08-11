@@ -20,15 +20,16 @@ void clock_signal_add_notify(ClockSignalDevice *clk,
                                        ClockSignalDeviceCB *callback,
                                        void *data);
 void clock_signal_set_enabled(ClockSignalDevice *clk, bool enabled);
+void clock_signal_set_max_freq(ClockSignalDevice *clk, clkfreq freq);
 
-ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled);
+ClockSignalSource *new_clock_signal_source(Object *parent, const char *name, clkfreq freq, bool enabled);
 void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq);
 
 ClockTreeNode *new_clock_tree_node(
+                         Object *parent, const char *name,
                          ClockSignalDevice *input_clock,
                          uint32_t mul, uint32_t div,
-                         bool enabled,
-                         clkfreq max_freq);
+                         bool enabled);
 void clock_node_set_input_clock(ClockTreeNode *clk,
                                  ClockSignalDevice *input_clock);
 void clock_node_set_scale(ClockTreeNode *clk, uint32_t mul, uint32_t div);

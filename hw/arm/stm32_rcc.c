@@ -22,6 +22,7 @@
 
 #include "hw/arm/stm32.h"
 #include "hw/arm/stm32_clktree.h"
+#include "hw/clock_signal.h"
 #include "qemu/bitops.h"
 #include <stdio.h>
 
@@ -191,9 +192,15 @@ struct Stm32Rcc {
         RCC_CFGR_HPRE,
         RCC_CFGR_SW;
 
+    ClockSignalSource
+        *hsi_clk,
+        *hse_clk,
+        *lsi_clk,
+        *lse_clk;
+
     Clk
-        HSICLK,
         HSECLK,
+        HSICLK,
         LSECLK,
         LSICLK,
         SYSCLK,
@@ -571,6 +578,11 @@ static void stm32_rcc_reset(DeviceState *dev)
 {
     Stm32Rcc *s = FROM_SYSBUS(Stm32Rcc, SYS_BUS_DEVICE(dev));
 
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->hsi_clk), true);
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->hse_clk), false);
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->lsi_clk), false);
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->lse_clk), false);
+
     stm32_rcc_RCC_CR_write(s, 0x00000083, true);
     stm32_rcc_RCC_CFGR_write(s, 0x00000000, true);
     stm32_rcc_RCC_APB2ENR_write(s, 0x00000000, true);
@@ -676,6 +688,7 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
     qemu_irq *hclk_upd_irq =
             qemu_allocate_irqs(stm32_rcc_hclk_upd_irq_handler, s, 1);
     Clk HSI_DIV2, HSE_DIV2;
+    ClockTreeNode *hsi_div2, *hse_div2;
 
     /* Make sure all the peripheral clocks are null initially.
      * This will be used for error checking to make sure
@@ -687,19 +700,33 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
     }
 
     /* Initialize clocks */
+    Object *clock_tree = container_get(OBJECT(s), "/clock-tree");
+
     /* Source clocks are initially disabled, which represents
      * a disabled oscillator.  Enabling the clock represents
      * turning the clock on.
      */
     s->HSICLK = clktree_create_src_clk("HSI", HSI_FREQ, false);
-    s->LSICLK = clktree_create_src_clk("LSI", LSI_FREQ, false);
     s->HSECLK = clktree_create_src_clk("HSE", s->osc_freq, false);
+    s->LSICLK = clktree_create_src_clk("LSI", LSI_FREQ, false);
     s->LSECLK = clktree_create_src_clk("LSE", s->osc32_freq, false);
+
+    s->hsi_clk = new_clock_signal_source(clock_tree, "hsi-osc", HSI_FREQ, false);
+    s->hse_clk = new_clock_signal_source(clock_tree, "hse-osc", s->osc_freq, false);
+    s->lsi_clk = new_clock_signal_source(clock_tree, "lsi-osc", LSI_FREQ, false);
+    s->lse_clk = new_clock_signal_source(clock_tree, "lse-osc", s->osc32_freq, false);
 
     HSI_DIV2 = clktree_create_clk("HSI/2", 1, 2, true, CLKTREE_NO_MAX_FREQ, 0,
                         s->HSICLK, NULL);
     HSE_DIV2 = clktree_create_clk("HSE/2", 1, 2, true, CLKTREE_NO_MAX_FREQ, 0,
-                        s->HSECLK, NULL);
+            s->HSICLK/*s->HSECLK*/, NULL);
+
+    hsi_div2 = new_clock_tree_node(clock_tree, "hsi-div2",
+                                   CLOCK_SIGNAL_DEVICE(s->hsi_clk), 1, 2, true);
+    hse_div2 = new_clock_tree_node(clock_tree, "hse-div2",
+                                   CLOCK_SIGNAL_DEVICE(s->hse_clk), 1, 2, true);
+    hsi_div2 = hsi_div2;
+    hse_div2 = hse_div2;
 
     s->PLLXTPRECLK = clktree_create_clk("PLLXTPRE", 1, 1, true, CLKTREE_NO_MAX_FREQ, CLKTREE_NO_INPUT,
                         s->HSECLK, HSE_DIV2, NULL);

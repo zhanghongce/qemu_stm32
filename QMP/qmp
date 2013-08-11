@@ -118,7 +118,7 @@ def main(args):
             return 1
 
         arguments[arg] = value
-
+print command
     rsp = do_command(srv, command, **arguments)
     print_response(rsp)
 

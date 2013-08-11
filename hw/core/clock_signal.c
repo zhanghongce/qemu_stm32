@@ -24,12 +24,18 @@ void clock_signal_add_notify(ClockSignalDevice *clk,
 
 void clock_signal_set_enabled(ClockSignalDevice *clk, bool enabled)
 {
-    object_property_set_bool(OBJECT(clk), enabled, "output-freq", NULL);
+    object_property_set_bool(OBJECT(clk), enabled, "enabled", NULL);
 }
 
-ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled)
+void clock_signal_set_max_freq(ClockSignalDevice *clk, clkfreq max_freq)
+{
+    object_property_set_int(OBJECT(clk), max_freq, "max-freq", NULL);
+}
+
+ClockSignalSource *new_clock_signal_source(Object *parent, const char *name, clkfreq freq, bool enabled)
 {
     DeviceState *dev = qdev_create(NULL, TYPE_CLOCK_SIGNAL_SOURCE);
+    object_property_add_child(parent, name, OBJECT(dev), NULL);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(dev), enabled);
     clock_signal_source_set_freq(CLOCK_SIGNAL_SOURCE(dev), freq);
     qdev_init_nofail(dev);
@@ -42,12 +48,13 @@ void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq)
 }
 
 ClockTreeNode *new_clock_tree_node(
+                         Object *parent, const char *name,
                          ClockSignalDevice *input_clock,
                          uint32_t mul, uint32_t div,
-                         bool enabled,
-                         clkfreq max_freq)
+                         bool enabled)
 {
     DeviceState *dev = qdev_create(NULL, TYPE_CLOCK_TREE_NODE);
+    object_property_add_child(parent, name, OBJECT(dev), NULL);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(dev), enabled);
     clock_node_set_scale(CLOCK_TREE_NODE(dev), mul, div);
     clock_node_set_input_clock(CLOCK_TREE_NODE(dev), input_clock);
@@ -60,6 +67,8 @@ void clock_node_set_input_clock(ClockTreeNode *clk,
 {
     object_property_set_link(
             OBJECT(clk), OBJECT(input_clock), "input-clock", NULL);
+    object_property_set_bool(
+            OBJECT(clk), true, "input-clock-changed", NULL);
 }
 
 void clock_node_set_scale(ClockTreeNode *clk, uint32_t mul, uint32_t div)
@@ -147,7 +156,7 @@ static void clk_sig_dev_get_output_freq_prop(Object *obj, struct Visitor *v, voi
                                  const char *name, struct Error **errp)
 {
     ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint64(v, &clk->max_output_freq, name, errp);
+    visit_type_uint64(v, &clk->output_freq, name, errp);
 }
 
 static void clk_sig_dev_get_max_freq_prop(Object *obj, struct Visitor *v, void *opaque,
@@ -302,14 +311,30 @@ static bool clk_sig_dev_get_input_clock_changed_prop(Object *obj, Error **errp)
     return false;
 }
 
+static void clk_tree_node_propagate_input_clock_freq(ClockTreeNode *clk)
+{
+    ClockSignalDevice *input_clk = clk->input_clock;
+    clkfreq new_freq = clock_signal_get_output_freq(input_clk);
+    clk_sig_dev_set_freq(CLOCK_SIGNAL_DEVICE(clk), new_freq);
+}
+
+static void clk_tree_node_input_clock_freq_changed(
+        ClockSignalDevice *clk,
+        clkfreq new_output_freq,
+        void *data)
+{
+    clk_tree_node_propagate_input_clock_freq((ClockTreeNode *)data);
+}
+
 static void clk_sig_dev_set_input_clock_changed_prop(Object *obj, bool value, Error **errp)
 {
-    clkfreq new_freq;
-    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
-    ClockSignalDevice *input_clk = CLOCK_TREE_NODE(clk)->input_clock;
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
     if(value) {
-        new_freq = clock_signal_get_output_freq(input_clk);
-        clk_sig_dev_set_freq(clk, new_freq);
+        clk_tree_node_propagate_input_clock_freq(clk);
+        clock_signal_add_notify(
+                clk->input_clock,
+                clk_tree_node_input_clock_freq_changed,
+                (void *)clk);
     }
 }
 

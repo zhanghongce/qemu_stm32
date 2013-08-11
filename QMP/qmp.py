@@ -107,6 +107,7 @@ class QEMUMonitorProtocol:
         @return QMP response as a Python dict or None if the connection has
                 been closed
         """
+        #print qmp_cmd
         try:
             self.__sock.sendall(json.dumps(qmp_cmd))
         except socket.error, err:
