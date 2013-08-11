@@ -198,6 +198,19 @@ struct Stm32Rcc {
         *lsi_clk,
         *lse_clk;
 
+    ClockTreeNode
+        *hsi_div2_clk,
+        *hse_div2_clk,
+        *pllxtpre_clk,
+        *pll_clk,
+        *sys_clk,
+        *hclk, /* Output from AHB Prescaler */
+        *pclk1, /* Output from APB1 Prescaler */
+        *pclk2, /* Output from APB2 Prescaler */
+        *gpio_clk[STM32_GPIO_COUNT],
+        *afio_clk,
+        *uart_clk[STM32_UART_COUNT];
+
     Clk
         HSECLK,
         HSICLK,
@@ -576,12 +589,42 @@ static const MemoryRegionOps stm32_rcc_ops = {
 
 static void stm32_rcc_reset(DeviceState *dev)
 {
+    int i;
     Stm32Rcc *s = FROM_SYSBUS(Stm32Rcc, SYS_BUS_DEVICE(dev));
 
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->hsi_clk), true);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->hse_clk), false);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->lsi_clk), false);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->lse_clk), false);
+
+    clock_node_set_input_clock(
+            CLOCK_TREE_NODE(s->pllxtpre_clk),
+            CLOCK_SIGNAL_DEVICE(s->hse_clk));
+
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->pll_clk), false);
+    clock_node_set_input_clock(
+            CLOCK_TREE_NODE(s->pll_clk),
+            CLOCK_SIGNAL_DEVICE(s->hsi_div2_clk));
+    clock_node_set_scale(CLOCK_TREE_NODE(s->pll_clk), 2, 1);
+
+    clock_node_set_input_clock(
+            CLOCK_TREE_NODE(s->sys_clk),
+            CLOCK_SIGNAL_DEVICE(s->hsi_clk));
+
+    clock_node_set_scale(CLOCK_TREE_NODE(s->hclk), 1, 1);
+
+    clock_node_set_scale(CLOCK_TREE_NODE(s->pclk1), 1, 1);
+    clock_node_set_scale(CLOCK_TREE_NODE(s->pclk2), 1, 1);
+
+    for(i = 0; i < STM32_GPIO_COUNT; i++) {
+        clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->gpio_clk[i]), false);
+    }
+
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->afio_clk), false);
+
+    for(i = 0; i < STM32_UART_COUNT; i++) {
+        clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(s->uart_clk[i]), false);
+    }
 
     stm32_rcc_RCC_CR_write(s, 0x00000083, true);
     stm32_rcc_RCC_CFGR_write(s, 0x00000000, true);
@@ -682,22 +725,19 @@ uint32_t stm32_rcc_get_periph_freq(
 /* DEVICE INITIALIZATION */
 
 /* Set up the clock tree */
+static ClockTreeNode *stm32_rcc_new_periph_clk(
+                         Object *parent, const char *name,
+                         ClockTreeNode *input_node)
+{
+    return new_clock_tree_node(parent, name, CLOCK_SIGNAL_DEVICE(input_node),
+            1, 1, false);
+}
+
 static void stm32_rcc_init_clk(Stm32Rcc *s)
 {
-    int i;
     qemu_irq *hclk_upd_irq =
             qemu_allocate_irqs(stm32_rcc_hclk_upd_irq_handler, s, 1);
     Clk HSI_DIV2, HSE_DIV2;
-    ClockTreeNode *hsi_div2, *hse_div2;
-
-    /* Make sure all the peripheral clocks are null initially.
-     * This will be used for error checking to make sure
-     * an invalid clock is not referenced (not all of the
-     * indexes will be used).
-     */
-    for(i = 0; i < STM32_PERIPH_COUNT; i++) {
-        s->PERIPHCLK[i] = NULL;
-    }
 
     /* Initialize clocks */
     Object *clock_tree = container_get(OBJECT(s), "/clock-tree");
@@ -721,32 +761,54 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
     HSE_DIV2 = clktree_create_clk("HSE/2", 1, 2, true, CLKTREE_NO_MAX_FREQ, 0,
             s->HSICLK/*s->HSECLK*/, NULL);
 
-    hsi_div2 = new_clock_tree_node(clock_tree, "hsi-div2",
+    s->hsi_div2_clk = new_clock_tree_node(clock_tree, "hsi-div2",
                                    CLOCK_SIGNAL_DEVICE(s->hsi_clk), 1, 2, true);
-    hse_div2 = new_clock_tree_node(clock_tree, "hse-div2",
+    s->hse_div2_clk = new_clock_tree_node(clock_tree, "hse-div2",
                                    CLOCK_SIGNAL_DEVICE(s->hse_clk), 1, 2, true);
-    hsi_div2 = hsi_div2;
-    hse_div2 = hse_div2;
 
     s->PLLXTPRECLK = clktree_create_clk("PLLXTPRE", 1, 1, true, CLKTREE_NO_MAX_FREQ, CLKTREE_NO_INPUT,
                         s->HSECLK, HSE_DIV2, NULL);
+
+    s->pllxtpre_clk = new_clock_tree_node(clock_tree, "pllxtpre",
+                                   NULL, 1, 1, true);
+
+
     /* PLLCLK contains both the switch and the multiplier, which are shown as
      * two separate components in the clock tree diagram.
      */
     s->PLLCLK = clktree_create_clk("PLLCLK", 0, 1, false, 72000000, CLKTREE_NO_INPUT,
                         HSI_DIV2, s->PLLXTPRECLK, NULL);
+    s->pll_clk = new_clock_tree_node(clock_tree, "pll",
+                                   NULL, 0, 1, true);
+    /* combine max freq into the new_clock_tree_node function? */
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->pll_clk), 72000000);
 
     s->SYSCLK = clktree_create_clk("SYSCLK", 1, 1, true, 72000000, CLKTREE_NO_INPUT,
                         s->HSICLK, s->HSECLK, s->PLLCLK, NULL);
+    s->sys_clk = new_clock_tree_node(clock_tree, "sys",
+                                   NULL, 1, 1, true);
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->pll_clk), 72000000);
 
     s->HCLK = clktree_create_clk("HCLK", 0, 1, true, 72000000, 0,
                         s->SYSCLK, NULL);
     clktree_adduser(s->HCLK, hclk_upd_irq[0]);
 
+    s->hclk = new_clock_tree_node(clock_tree, "hclk",
+                                  CLOCK_SIGNAL_DEVICE(s->sys_clk), 0, 1, true);
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 72000000);
+
     s->PCLK1 = clktree_create_clk("PCLK1", 0, 1, true, 36000000, 0,
-                        s->HCLK, NULL);
+            s->HCLK, NULL);
     s->PCLK2 = clktree_create_clk("PCLK2", 0, 1, true, 72000000, 0,
-                        s->HCLK, NULL);
+            s->HCLK, NULL);
+
+    s->pclk1 = new_clock_tree_node(clock_tree, "pclk1",
+            CLOCK_SIGNAL_DEVICE(s->hclk), 0, 1, true);
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 72000000);
+
+    s->pclk2 = new_clock_tree_node(clock_tree, "pclk2",
+            CLOCK_SIGNAL_DEVICE(s->hclk), 0, 1, true);
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 72000000);
 
     /* Peripheral clocks */
     s->PERIPHCLK[STM32_GPIOA] = clktree_create_clk("GPIOA", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
@@ -764,6 +826,22 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
     s->PERIPHCLK[STM32_UART3] = clktree_create_clk("UART3", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
     s->PERIPHCLK[STM32_UART4] = clktree_create_clk("UART4", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
     s->PERIPHCLK[STM32_UART5] = clktree_create_clk("UART5", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
+
+    s->gpio_clk[0] = stm32_rcc_new_periph_clk(clock_tree, "gpio[a]", s->pclk2);
+    s->gpio_clk[1] = stm32_rcc_new_periph_clk(clock_tree, "gpio[b]", s->pclk2);
+    s->gpio_clk[2] = stm32_rcc_new_periph_clk(clock_tree, "gpio[c]", s->pclk2);
+    s->gpio_clk[3] = stm32_rcc_new_periph_clk(clock_tree, "gpio[d]", s->pclk2);
+    s->gpio_clk[4] = stm32_rcc_new_periph_clk(clock_tree, "gpio[e]", s->pclk2);
+    s->gpio_clk[5] = stm32_rcc_new_periph_clk(clock_tree, "gpio[f]", s->pclk2);
+    s->gpio_clk[6] = stm32_rcc_new_periph_clk(clock_tree, "gpio[g]", s->pclk2);
+
+    s->afio_clk = stm32_rcc_new_periph_clk(clock_tree, "afio", s->pclk2);
+
+    s->uart_clk[0] = stm32_rcc_new_periph_clk(clock_tree, "uart[1]", s->pclk2);
+    s->uart_clk[1] = stm32_rcc_new_periph_clk(clock_tree, "uart[2]", s->pclk1);
+    s->uart_clk[2] = stm32_rcc_new_periph_clk(clock_tree, "uart[3]", s->pclk1);
+    s->uart_clk[3] = stm32_rcc_new_periph_clk(clock_tree, "uart[4]", s->pclk1);
+    s->uart_clk[4] = stm32_rcc_new_periph_clk(clock_tree, "uart[5]", s->pclk1);
 }
 
 

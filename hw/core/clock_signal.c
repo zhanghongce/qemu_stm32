@@ -57,7 +57,9 @@ ClockTreeNode *new_clock_tree_node(
     object_property_add_child(parent, name, OBJECT(dev), NULL);
     clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(dev), enabled);
     clock_node_set_scale(CLOCK_TREE_NODE(dev), mul, div);
-    clock_node_set_input_clock(CLOCK_TREE_NODE(dev), input_clock);
+    if(input_clock) {
+        clock_node_set_input_clock(CLOCK_TREE_NODE(dev), input_clock);
+    }
     qdev_init_nofail(dev);
     return CLOCK_TREE_NODE(dev);
 }
@@ -271,7 +273,6 @@ struct ClockTreeNode {
     ClockSignalDevice clk;
     /*< public >*/
 
-    clkfreq input_freq;
     // TODO: Need to work on naming of these variables
     uint32_t multiplier, divisor;
 
@@ -314,7 +315,8 @@ static bool clk_sig_dev_get_input_clock_changed_prop(Object *obj, Error **errp)
 static void clk_tree_node_propagate_input_clock_freq(ClockTreeNode *clk)
 {
     ClockSignalDevice *input_clk = clk->input_clock;
-    clkfreq new_freq = clock_signal_get_output_freq(input_clk);
+    clkfreq new_input_freq = clock_signal_get_output_freq(input_clk);
+    clkfreq new_freq = muldiv64(new_input_freq, clk->multiplier, clk->divisor);
     clk_sig_dev_set_freq(CLOCK_SIGNAL_DEVICE(clk), new_freq);
 }
 
@@ -341,7 +343,6 @@ static void clk_sig_dev_set_input_clock_changed_prop(Object *obj, bool value, Er
 static void clk_tree_node_instance_init(Object *obj)
 {
     ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
-    clk->input_freq = 0;
     clk->multiplier = 1;
     clk->divisor = 1;
     clk->input_clock = NULL;
