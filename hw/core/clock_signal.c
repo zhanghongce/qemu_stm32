@@ -2,6 +2,29 @@
 #include "qemu/notify.h
 #include "qemu/log.h"
 
+
+
+/* Helper functions for creating and modifying clock signal objects */
+clkfreq clock_signal_device_get_output_freq(ClockTreeNode *clk);
+clkfreq clock_signal_device_add_notify(ClockSignalDevice *clk,
+                                       ClockSignalDeviceCB callback);
+void clock_signal_device_set_enabled(ClockTreeNode *clk, bool enabled);
+
+ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled);
+void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq);
+
+ClockTreeNode *new_clock_tree_node(
+                         ClockSignalDevice *input_clock,
+                         uint32_t mult, uint32_t div,
+                         bool enabled,
+                         clkfreq max_freq);
+void clock_tree_node_set_input_clock(ClockTreeNode *clk,
+                                 ClockSignalDevice *input_clock);
+void clock_tree_node_set_scale(ClockTreeNode *clk, uint32_t mult, uint32_t div);
+
+
+
+
 struct ClockSignalDevice {
     /*< private >*/
     DeviceState qdev;
@@ -97,18 +120,16 @@ static void clk_sig_dev_set_max_freq_prop(Object *obj, struct Visitor *v, void *
     clk_sig_dev_check_max_freq(clk);
 }
 
-static void clk_sig_dev_get_enabled_prop(Object *obj, struct Visitor *v, void *opaque,
-                                 const char *name, struct Error **errp)
+static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
 {
     ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->output_enabled, name, errp);
+    return clk->output_enabled = value;
 }
 
-static void clk_sig_dev_set_enabled_prop(Object *obj, struct Visitor *v, void *opaque,
-                                 const char *name, struct Error **errp)
+static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
 {
     ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->output_enabled, name, errp);
+    clk->output_enabled = value;
     clk_sig_dev_recalc_output_freq(clk);
 }
 
@@ -203,6 +224,63 @@ struct ClockTreeNode {
     ClockSignalDevice *input_clock;
 };
 
+static void clk_sig_dev_get_mult_prop(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->mult, name, errp);
+}
+
+static void clk_sig_dev_set_mult_prop(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->mult, name, errp);
+}
+
+static void clk_sig_dev_get_div_prop(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->div, name, errp);
+}
+
+static void clk_sig_dev_set_div_prop(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->div, name, errp);
+}
+
+static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    return clk->output_enabled = value;
+}
+
+static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    clk->output_enabled = value;
+    clk_sig_dev_recalc_output_freq(clk);
+}
+
+static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
+{
+    return false;
+}
+
+static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
+{
+    clkfreq new_freq;
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    ClockSignalDevice input_clk = CLOCK_TREE_NODE(clk)->input_clock;
+    if(value)
+        new_freq = clock_signal_device_get_output_freq(input_clk);
+        clk_sig_dev_set_freq(clk, new_freq);
+    }
+}
+
 static void clk_tree_node_instance_init(Object *obj)
 {
     ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(dev);
@@ -216,15 +294,20 @@ static void clk_tree_node_instance_init(Object *obj)
                         clk_sig_dev_set_mult_prop,
                         NULL, NULL, NULL);
     object_property_add(obj, "divider", "int",
-                        clk_sig_dev_get_max_freq_prop,
-                        clk_sig_dev_set_max_freq_prop,
+                        clk_sig_dev_get_div_prop,
+                        clk_sig_dev_set_div_prop,
                         NULL, NULL, NULL);
     // We need to be able to trigger the frequency to be updated when
     // the input clock link is changed.  However, the link functionality
-    // doesn't seem to allow custom setters.  For now just use a function
-    // to do the input clock update.
-    //object_property_add_link(obj, "input-clock", TYPE_CLOCK_SIGNAL_DEVICE,
-    //                         (Object **)&s->input_clock, NULL);
+    // doesn't seem to allow custom setters.  For now we provide a
+    // property to do so, but long-term need to figure out how to use
+    // the link only.
+    object_property_add_link(obj, "input-clock", TYPE_CLOCK_SIGNAL_DEVICE,
+                             (Object **)&s->input_clock, NULL);
+    object_property_add_bool(obj, "input-clock-changed",
+                             clk_sig_dev_get_input_clock_changed_prop,
+                             clk_sig_dev_set_input_clock_changed_prop,
+                             NULL);
 }
 
 static const TypeInfo clock_tree_node_info = {
