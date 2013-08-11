@@ -1,26 +1,72 @@
 #include "hw/clock_signal.h"
-#include "qemu/notify.h
+#include "qemu-common.h"
+#include "qemu/notify.h"
 #include "qemu/log.h"
+#include "qapi-types.h"
+#include "qapi-visit.h"
+#include "qapi/visitor.h"
 
 
 
 /* Helper functions for creating and modifying clock signal objects */
-clkfreq clock_signal_device_get_output_freq(ClockTreeNode *clk);
-clkfreq clock_signal_device_add_notify(ClockSignalDevice *clk,
-                                       ClockSignalDeviceCB callback);
-void clock_signal_device_set_enabled(ClockTreeNode *clk, bool enabled);
+clkfreq clock_signal_get_output_freq(ClockSignalDevice *clk)
+{
+    return object_property_get_int(OBJECT(clk), "output-freq", NULL);
+}
 
-ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled);
-void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq);
+void clock_signal_add_notify(ClockSignalDevice *clk,
+                                ClockSignalDeviceCB callback,
+                                void *data)
+{
+    ClockSignalDeviceClass *clkclass = CLOCK_SIGNAL_DEVICE_GET_CLASS(clk);
+    clkclass->add_notify(clk, callback, data);
+}
+
+void clock_signal_set_enabled(ClockSignalDevice *clk, bool enabled)
+{
+    object_property_set_bool(OBJECT(clk), enabled, "output-freq", NULL);
+}
+
+ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled)
+{
+    DeviceState *dev = qdev_create(NULL, TYPE_CLOCK_SIGNAL_SOURCE);
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(dev), enabled);
+    clock_signal_source_set_freq(CLOCK_SIGNAL_SOURCE(dev), freq);
+    qdev_init_nofail(dev);
+    return CLOCK_SIGNAL_SOURCE(dev);
+}
+
+void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq)
+{
+    object_property_set_int(OBJECT(clk), freq, "source-freq", NULL);
+}
 
 ClockTreeNode *new_clock_tree_node(
                          ClockSignalDevice *input_clock,
-                         uint32_t mult, uint32_t div,
+                         uint32_t mul, uint32_t div,
                          bool enabled,
-                         clkfreq max_freq);
-void clock_tree_node_set_input_clock(ClockTreeNode *clk,
-                                 ClockSignalDevice *input_clock);
-void clock_tree_node_set_scale(ClockTreeNode *clk, uint32_t mult, uint32_t div);
+                         clkfreq max_freq)
+{
+    DeviceState *dev = qdev_create(NULL, TYPE_CLOCK_TREE_NODE);
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(dev), enabled);
+    clock_node_set_scale(CLOCK_TREE_NODE(dev), mul, div);
+    clock_node_set_input_clock(CLOCK_TREE_NODE(dev), input_clock);
+    qdev_init_nofail(dev);
+    return CLOCK_TREE_NODE(dev);
+}
+
+void clock_node_set_input_clock(ClockTreeNode *clk,
+                                 ClockSignalDevice *input_clock)
+{
+    object_property_set_link(
+            OBJECT(clk), OBJECT(input_clock), "input-clock", NULL);
+}
+
+void clock_node_set_scale(ClockTreeNode *clk, uint32_t mul, uint32_t div)
+{
+    object_property_set_int(OBJECT(clk), mul, "multiplier", NULL);
+    object_property_set_int(OBJECT(clk), div, "divider", NULL);
+}
 
 
 
@@ -39,21 +85,21 @@ static void clk_sig_dev_recalc_output_freq(ClockSignalDevice *clk)
 {
     clkfreq old_output_freq = clk->output_freq;
     clk->output_freq = clk->output_enabled ? clk->freq : 0;
-    if(clk->output_freq != old_ouput_freq) {
-        notifier_list_notify(clk->output_change_notifiers, clk);
+    if(clk->output_freq != old_output_freq) {
+        notifier_list_notify(&clk->output_change_notifiers, clk);
     }
 }
 
 static void clk_sig_dev_check_max_freq(ClockSignalDevice *clk)
 {
-    if(clk->max_freq) {
-        if(clk->output_freq > clk->max_freq) {
-            qemu_log_mask(GUEST_ERROR,
+    if(clk->max_output_freq) {
+        if(clk->output_freq > clk->max_output_freq) {
+            qemu_log_mask(LOG_GUEST_ERROR,
                     "Clock Signal Device: Clock %s exceeded its maximum"
                     "frequency: output freq=%llu max freq=%llu\n",
                     object_get_canonical_path(OBJECT(clk)),
                     (unsigned long long)clk->output_freq,
-                    (unsigned long long)clk->max_freq)
+                    (unsigned long long)clk->max_output_freq);
         }
     }
 }
@@ -65,77 +111,76 @@ static void clk_sig_dev_set_freq(ClockSignalDevice *clk, clkfreq freq)
 {
     clk->freq = freq;
     clk_sig_dev_check_max_freq(clk);
-    clk_sig_dev_recalc_output_freq(vlk);
+    clk_sig_dev_recalc_output_freq(clk);
 }
 
 static clkfreq clk_sig_dev_get_output_freq(ClockSignalDevice *clk)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
     return clk->output_freq;
 }
 
 typedef struct ClockSignalNotifier {
     Notifier n;
-    ClockSignalDeviceCB callback;
+    ClockSignalDeviceCB *callback;
     void *data;
 } ClockSignalNotifier;
 
-static clk_sig_dev_output_change_notify_handler(Notifier *notifier, void *data)
+static void clk_sig_dev_output_change_notify_handler(Notifier *notifier, void *data)
 {
-    ClockSignalDevice clk = (ClockSignalDevice *)data;
+    ClockSignalDevice *clk = (ClockSignalDevice *)data;
     ClockSignalNotifier *csn = DO_UPCAST(ClockSignalNotifier, n, notifier);
     csn->callback(clk, clk->output_freq, csn->data);
 }
 
-static clkfreq clk_sig_dev_add_notify(ClockSignalDevice *clk,
-                                      ClockSignalDeviceCB callback,
-                                      void *opaque)
+static void clk_sig_dev_add_notify(ClockSignalDevice *clk,
+                                   ClockSignalDeviceCB *callback,
+                                   void *data)
 {
     ClockSignalNotifier *csn = g_malloc0(sizeof(ClockSignalNotifier));
     csn->n.notify = clk_sig_dev_output_change_notify_handler;
     csn->callback = callback;
     csn->data = data;
-    notifier_list_add(&clk->output_change_notifiers, csn->n)
+    notifier_list_add(&clk->output_change_notifiers, &csn->n);
 }
 
 static void clk_sig_dev_get_output_freq_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->max_freq, name, errp);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint64(v, &clk->max_output_freq, name, errp);
 }
 
 static void clk_sig_dev_get_max_freq_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->max_freq, name, errp);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint64(v, &clk->max_output_freq, name, errp);
 }
 
 static void clk_sig_dev_set_max_freq_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->max_freq, name, errp);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint64(v, &clk->max_output_freq, name, errp);
     clk_sig_dev_check_max_freq(clk);
 }
 
 static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    return clk->output_enabled = value;
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    return clk->output_enabled;
 }
 
 static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
     clk->output_enabled = value;
     clk_sig_dev_recalc_output_freq(clk);
 }
 
 static void clk_sig_dev_instance_init(Object *obj)
 {
-    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(dev);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
     clk->freq = 0;
     clk->output_enabled = true;
     clk->output_freq = 0;
@@ -158,7 +203,6 @@ static void clk_sig_dev_instance_init(Object *obj)
 
 static void clk_sig_dev_class_init(ObjectClass *klass, void *data)
 {
-    DeviceClass *k = DEVICE_CLASS(klass);
     ClockSignalDeviceClass *clkclass = CLOCK_SIGNAL_DEVICE_CLASS(klass);
     clkclass->get_output_freq = clk_sig_dev_get_output_freq;
     clkclass->add_notify = clk_sig_dev_add_notify;
@@ -182,16 +226,16 @@ static const TypeInfo clock_signal_device_info = {
 static void clk_sig_src_get_source_freq_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->freq, name, errp);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint64(v, &clk->freq, name, errp);
 }
 
 static void clk_sig_src_set_source_freq_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
     clkfreq new_freq;
-    visit_type_uint32(v, &new_freq, name, errp);
-    clk_sig_dev_set_freq(clk, new_freq);
+    visit_type_uint64(v, &new_freq, name, errp);
+    clk_sig_dev_set_freq(CLOCK_SIGNAL_DEVICE(obj), new_freq);
 }
 
 static void clk_sig_src_instance_init(Object *obj)
@@ -219,79 +263,67 @@ struct ClockTreeNode {
     /*< public >*/
 
     clkfreq input_freq;
+    // TODO: Need to work on naming of these variables
     uint32_t multiplier, divisor;
 
     ClockSignalDevice *input_clock;
 };
 
-static void clk_sig_dev_get_mult_prop(Object *obj, struct Visitor *v, void *opaque,
+static void clk_sig_dev_get_mul_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->mult, name, errp);
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
+    visit_type_uint32(v, &clk->multiplier, name, errp);
 }
 
-static void clk_sig_dev_set_mult_prop(Object *obj, struct Visitor *v, void *opaque,
+static void clk_sig_dev_set_mul_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->mult, name, errp);
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
+    visit_type_uint32(v, &clk->multiplier, name, errp);
 }
 
 static void clk_sig_dev_get_div_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->div, name, errp);
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
+    visit_type_uint32(v, &clk->divisor, name, errp);
 }
 
 static void clk_sig_dev_set_div_prop(Object *obj, struct Visitor *v, void *opaque,
                                  const char *name, struct Error **errp)
 {
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    visit_type_uint32(v, &clk->div, name, errp);
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
+    visit_type_uint32(v, &clk->divisor, name, errp);
 }
 
-static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
-{
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    return clk->output_enabled = value;
-}
-
-static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
-{
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    clk->output_enabled = value;
-    clk_sig_dev_recalc_output_freq(clk);
-}
-
-static bool clk_sig_dev_get_enabled_prop(Object *obj, Error **errp)
+static bool clk_sig_dev_get_input_clock_changed_prop(Object *obj, Error **errp)
 {
     return false;
 }
 
-static void clk_sig_dev_set_enabled_prop(Object *obj, bool value, Error **errp)
+static void clk_sig_dev_set_input_clock_changed_prop(Object *obj, bool value, Error **errp)
 {
     clkfreq new_freq;
-    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
-    ClockSignalDevice input_clk = CLOCK_TREE_NODE(clk)->input_clock;
-    if(value)
-        new_freq = clock_signal_device_get_output_freq(input_clk);
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(obj);
+    ClockSignalDevice *input_clk = CLOCK_TREE_NODE(clk)->input_clock;
+    if(value) {
+        new_freq = clock_signal_get_output_freq(input_clk);
         clk_sig_dev_set_freq(clk, new_freq);
     }
 }
 
 static void clk_tree_node_instance_init(Object *obj)
 {
-    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(dev);
+    ClockTreeNode *clk = CLOCK_TREE_NODE(obj);
     clk->input_freq = 0;
     clk->multiplier = 1;
     clk->divisor = 1;
     clk->input_clock = NULL;
 
     object_property_add(obj, "multiplier", "int",
-                        clk_sig_dev_get_mult_prop,
-                        clk_sig_dev_set_mult_prop,
+                        clk_sig_dev_get_mul_prop,
+                        clk_sig_dev_set_mul_prop,
                         NULL, NULL, NULL);
     object_property_add(obj, "divider", "int",
                         clk_sig_dev_get_div_prop,
@@ -303,7 +335,7 @@ static void clk_tree_node_instance_init(Object *obj)
     // property to do so, but long-term need to figure out how to use
     // the link only.
     object_property_add_link(obj, "input-clock", TYPE_CLOCK_SIGNAL_DEVICE,
-                             (Object **)&s->input_clock, NULL);
+                             (Object **)&clk->input_clock, NULL);
     object_property_add_bool(obj, "input-clock-changed",
                              clk_sig_dev_get_input_clock_changed_prop,
                              clk_sig_dev_set_input_clock_changed_prop,
