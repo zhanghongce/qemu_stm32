@@ -4,10 +4,27 @@ typedef uint64_t clkfreq;
 typedef void ClockSignalDeviceCB(
         ClockSignalDevice *clk,
         clkfreq new_output_freq,
-        void *opaque);
+        void *data);
 
-/* Helper functions for working with the classes */
-void new_
+/* Helper functions for creating and modifying clock signal objects */
+clkfreq clock_signal_device_get_output_freq(ClockTreeNode *clk);
+clkfreq clock_signal_device_add_notify(ClockSignalDevice *clk,
+                                       ClockSignalDeviceCB callback);
+void clock_signal_device_set_enabled(ClockTreeNode *clk, bool enabled);
+
+ClockSignalSource *new_clock_signal_source(clkfreq freq, bool enabled);
+void clock_signal_source_set_freq(ClockSignalSource *clk, clkfreq freq);
+
+ClockTreeNode *new_clock_tree_node(
+                         ClockSignalDevice *input_clock,
+                         uint32_t mult, uint32_t div,
+                         bool enabled,
+                         clkfreq max_freq);
+void clock_tree_node_set_input_clock(ClockTreeNode *clk,
+                                 ClockSignalDevice *input_clock);
+void clock_tree_node_set_scale(ClockTreeNode *clk, uint32_t mult, uint32_t div);
+
+
 
 #define TYPE_CLOCK_SIGNAL_DEVICE "clock-signal-device"
 #define CLOCK_SIGNAL_DEVICE(obj) \
