@@ -272,7 +272,6 @@ static void stm32_afio_instance_init(Object *obj)
 
     object_property_add_link(obj, "exti", TYPE_STM32_EXTI,
                                      (Object **)&s->exti, NULL);
-
 }
 
 static void stm32_afio_class_init(ObjectClass *klass, void *data)

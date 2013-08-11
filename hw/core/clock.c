@@ -1,61 +1,99 @@
 #include "hw/clock.h"
 #include "qemu/notify.h
+#include "qemu/log.h"
 
 struct ClockSignalDevice {
     /*< private >*/
     DeviceState qdev;
     /*< public >*/
 
-    clkfreq internal_freq, output_freq, max_internal_freq;
+    clkfreq freq, output_freq, max_output_freq;
     bool output_enabled;
     NotifierList output_freq_change_notifiers;
 };
 
-static clkfreq clk_sig_dev_get_output_freq(ClockSignalDevice *clk)
-{
-    return clk->output_enabled ? clk->freq : 0;
-}
-
 static void clk_sig_dev_recalc_output_freq(ClockSignalDevice *clk)
 {
-    notifier_list_notify(clk->output_freq_change_notifiers);
-}
-
-static void clk_sig_dev_set_output_enabled(ClockSignalDevice *clk, bool output_enabled)
-{
-    clk->output_enabled = output_enabled;
-    clk_sig_dev_recalc_output_freq(clk);
-
+    clkfreq old_output_freq = clk->output_freq;
+    clk->output_freq = clk->output_enabled ? clk->freq : 0;
+    if(clk->output_freq != old_ouput_freq) {
+        notifier_list_notify(clk->output_freq_change_notifiers, clk);
+    }
 }
 
 static void clk_sig_dev_check_max_freq(ClockSignalDevice *clk)
 {
     if(clk->max_freq) {
-        if(clk->freq > clk->max_freq) {
-
+        if(clk->output_freq > clk->max_freq) {
+            qemu_log_mask(GUEST_ERROR)
         }
     }
-}
-
-static void clk_sig_dev_set_max_freq(ClockSignalDevice *clk, clkfreq max_freq)
-{
-    clk->max_freq = max_freq;
-    clk_sig_dev_check_max_freq(clk);
 }
 
 static void clk_sig_dev_set_freq(ClockSignalDevice *clk, clkfreq freq)
 {
     clk->freq = freq;
     clk_sig_dev_check_max_freq(clk);
-    notifier_list_notify(clk->output_freq_change_notifiers);
+    notifier_list_notify(clk->output_freq_change_notifiers, clk);
+}
+
+static void clk_sig_dev_get_output_freq(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->max_freq, name, errp);
+}
+
+static void clk_sig_dev_get_max_freq(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->max_freq, name, errp);
+}
+
+static void clk_sig_dev_set_max_freq(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->max_freq, name, errp);
+    clk_sig_dev_check_max_freq(clk);
+}
+
+static void clk_sig_dev_get_output_enabled(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->output_enabled, name, errp);
+}
+
+static void clk_sig_dev_set_output_enabled(Object *obj, struct Visitor *v, void *opaque,
+                                 const char *name, struct Error **errp)
+{
+    ClockSignalDevice clk = CLOCK_SIGNAL_DEVICE(obj);
+    visit_type_uint32(v, &clk->output_enabled, name, errp);
+    clk_sig_dev_recalc_output_freq(clk);
 }
 
 static void clk_sig_dev_instance_init(Object *obj)
 {
     ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(dev);
     clk->freq = 0;
-    clk->max_freq = 0;
     clk->output_enabled = true;
+    clk->output_freq = 0;
+    clk->max_output_freq = 0;
+
+    object_property_add(obj, "output-freq", "int",
+                        clk_sig_dev_get_output_freq,
+                        NULL,
+                        NULL, NULL, NULL);
+    object_property_add(obj, "max-freq", "int",
+                        clk_sig_dev_get_max_freq,
+                        clk_sig_dev_set_max_freq,
+                        NULL, NULL, NULL);
+    object_property_add_bool(obj, "output-enabled",
+                             clk_sig_dev_get_output_enabled,
+                             clk_sig_dev_set_output_enabled,
+                             NULL);
 }
 
 static void clk_sig_dev_class_init(ObjectClass *klass, void *data)
