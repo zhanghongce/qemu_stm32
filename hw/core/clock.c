@@ -6,29 +6,26 @@ struct ClockSignalDevice {
     DeviceState qdev;
     /*< public >*/
 
-    clkfreq freq, max_freq;
+    clkfreq internal_freq, output_freq, max_internal_freq;
     bool output_enabled;
-    NotifierList freq_change_notifier;
+    NotifierList output_freq_change_notifiers;
 };
-
-
-static void clock_signal_device_realize(DeviceState *dev, Error **errp)
-{
-    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(dev);
-    clk->freq = 0;
-    clk->max_freq = 0;
-    clk->output_enabled = true;
-    clk_sig_dev_check_max_freq(clk);
-}
 
 static clkfreq clk_sig_dev_get_output_freq(ClockSignalDevice *clk)
 {
     return clk->output_enabled ? clk->freq : 0;
 }
 
+static void clk_sig_dev_recalc_output_freq(ClockSignalDevice *clk)
+{
+    notifier_list_notify(clk->output_freq_change_notifiers);
+}
+
 static void clk_sig_dev_set_output_enabled(ClockSignalDevice *clk, bool output_enabled)
 {
     clk->output_enabled = output_enabled;
+    clk_sig_dev_recalc_output_freq(clk);
+
 }
 
 static void clk_sig_dev_check_max_freq(ClockSignalDevice *clk)
@@ -43,17 +40,14 @@ static void clk_sig_dev_check_max_freq(ClockSignalDevice *clk)
 static void clk_sig_dev_set_max_freq(ClockSignalDevice *clk, clkfreq max_freq)
 {
     clk->max_freq = max_freq;
-    if(clk->qdev.realized) {
-        clk_sig_dev_check_max_freq(clk);
-    }
+    clk_sig_dev_check_max_freq(clk);
 }
 
 static void clk_sig_dev_set_freq(ClockSignalDevice *clk, clkfreq freq)
 {
     clk->freq = freq;
-    if(clk->qdev.realized) {
-        clk_sig_dev_check_max_freq(clk);
-    }
+    clk_sig_dev_check_max_freq(clk);
+    notifier_list_notify(clk->output_freq_change_notifiers);
 }
 
 static void clk_sig_dev_instance_init(Object *obj)
@@ -68,7 +62,6 @@ static void clk_sig_dev_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *k = DEVICE_CLASS(klass);
     ClockSignalDeviceClass *clkclass = CLOCK_SIGNAL_DEVICE_CLASS(klass);
-    k->realize = clock_signal_device_realize;
     clkclass->get_output_freq = clock_signal_device_get_output_freq;
     set_output_enabled = clock_signal_device_set_output_enabled
     set_max_freq = check_max_freq
