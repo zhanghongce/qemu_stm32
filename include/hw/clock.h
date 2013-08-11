@@ -47,16 +47,16 @@ struct ClockSignalDeviceClass {
     clkfreq (*get_output_freq)(ClockSignalDevice *clk);
     void (*set_output_enabled)(ClockSignalDevice *clk, bool output_enabled);
     void (*set_max_freq)(ClockSignalDevice *clk, clkfreq max_freq);
-    void (*add_notify)(ClockSignalDevice *clk, )
+    void (*add_notify)(ClockSignalDevice *clk, ClockSignalDeviceCB callback);
 
     /* Protected - should only be called by child classes */
-    void (*set_freq)(ClockSignalDevice *clk, clkfreq freq);
+    void (*set_internal_freq)(ClockSignalDevice *clk, clkfreq freq);
 } ClockSignalDeviceClass;
 
 struct ClockSignalSourceClass {
     ClockSignalDeviceClass parent_class;
 
-    void (*set_freq)(ClockSignalSource *clk, clkfreq freq);
+    void (*set_source_freq)(ClockSignalSource *clk, clkfreq freq);
 } ClockSignalSourceClass;
 
 struct ClockTreeNodeClass {

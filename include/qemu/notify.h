@@ -21,6 +21,7 @@ typedef struct Notifier Notifier;
 struct Notifier
 {
     void (*notify)(Notifier *notifier, void *data);
+    void *data;
     QLIST_ENTRY(Notifier) node;
 };
 
