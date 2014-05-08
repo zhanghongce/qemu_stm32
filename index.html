@@ -4,11 +4,11 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Qemu stm32 : QEMU with an STM32 microcontroller implementation" />
+    <meta name="description" content="Qemu STM32 : QEMU with an STM32 microcontroller implementation" />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
-    <title>Qemu stm32</title>
+    <title>Qemu STM32</title>
   </head>
 
   <body>
@@ -18,7 +18,7 @@
         <header class="inner">
           <a id="forkme_banner" href="https://github.com/beckus/qemu_stm32">View on GitHub</a>
 
-          <h1 id="project_title">Qemu stm32</h1>
+          <h1 id="project_title">Qemu STM32</h1>
           <h2 id="project_tagline">QEMU with an STM32 microcontroller implementation</h2>
 
             <section id="downloads">
@@ -31,44 +31,29 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h3>
-<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+        <p>This is a fork of the QEMU emulator which includes an implementation of the STM32 microcontroller.  I have not been actively working on this project but will try to when I have time.  I welcome any source code contributions.</p>
 
-<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+<p>I have not yet submitted any patches to QEMU mainstream for a couple of reasons:</p>
 
-<pre><code>$ cd your_repo_root/repo_name
-$ git fetch origin
-$ git checkout gh-pages
-</code></pre>
+<ol>
+<li>This project is still in a state of flux, and I would like the flexibility to change it without going through a patch process.</li>
+<li>I suspect it will take some time and effort to go through the submission process - time I would rather put into the project itself.  I have also made changes to the core framework, which may not be acceptable in the main QEMU branch or which will need to be modified.  I don't see much disadvantage to leaving this as a fork.  That being said, there are core components that could benefit other parts of QEMU (i.e. The clock tree objects and unit testing framework) that should be submitted.</li>
+</ol><p>Goals (in no particular order):</p>
 
-<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
-
-<h3>
-<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
-
-<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
-
-<h3>
-<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
-
-<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
-
-<h3>
-<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
-
-<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
-
-<h3>
-<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
-
-<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+<ul>
+<li>Make compliant with the new QOM framework.  Make use of properties as much as possible to provide visibility into the virtual machine.  For example, the UARTs can have properties indicating their baud rate and configuration.  Also, provide properties to be used for simulating exceptional situations.  For example, the UART could provide properties used to simulate parity and framing errors.  These properties provide debugging advantages over bare hardware and may even allow for automated testing.</li>
+<li>Provide complete unit testing of the STM32 implementation – if the unit tests pass you should be confident nothing is broken.</li>
+<li>When appropriate, modify core QEMU or add new generic components (e.g. The clock tree objects and unit testing framework).  Submit these components to the main QEMU project if possible.</li>
+<li>Continue to add new STM32 peripherals (SPI, timers, etc.) and enhance existing peripherals.</li>
+<li>Add new development boards, for example the low cost STM32 discovery boards.  Someone has also suggested supporting the CrazyFlie Nano Quadcopter.  Also add support for the Cortex M4 architecture.</li>
+</ul>
       </section>
     </div>
 
     <!-- FOOTER  -->
     <div id="footer_wrap" class="outer">
       <footer class="inner">
-        <p class="copyright">Qemu stm32 maintained by <a href="https://github.com/beckus">beckus</a></p>
+        <p class="copyright">Qemu STM32 maintained by <a href="https://github.com/beckus">beckus</a></p>
         <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
       </footer>
     </div>
