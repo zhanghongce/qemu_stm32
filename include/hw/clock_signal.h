@@ -20,6 +20,7 @@ void clock_signal_add_notify(ClockSignalDevice *clk,
                                        ClockSignalDeviceCB *callback,
                                        void *data);
 void clock_signal_set_enabled(ClockSignalDevice *clk, bool enabled);
+bool clock_signal_is_enabled(ClockSignalDevice *clk);
 void clock_signal_set_max_freq(ClockSignalDevice *clk, clkfreq freq);
 
 ClockSignalSource *new_clock_signal_source(Object *parent, const char *name, clkfreq freq, bool enabled);

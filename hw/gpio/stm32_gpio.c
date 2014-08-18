@@ -23,6 +23,7 @@
 #include "hw/sysbus.h"
 #include "hw/arm/stm32.h"
 #include "qemu/bitops.h"
+#include "hw/clock_signal.h"
 
 
 
@@ -41,14 +42,10 @@ struct Stm32Gpio {
     /* Inherited */
     SysBusDevice busdev;
 
-    /* Properties */
-    stm32_periph_t periph;
-    void *stm32_rcc_prop;
-
     /* Private */
     MemoryRegion iomem;
 
-    Stm32Rcc *stm32_rcc;
+    ClockSignalDevice *periph_clock;
 
 
     uint32_t GPIOx_CRy[2]; /* CRL = 0, CRH = 1 */
@@ -96,7 +93,8 @@ static void stm32_gpio_in_trigger(void *opaque, int irq, int level)
 /* Gets the four configuration bits for the pin from the CRL or CRH
  * register.
  */
-static uint8_t stm32_gpio_get_pin_config(Stm32Gpio *s, unsigned pin) {
+static uint8_t stm32_gpio_get_pin_config(Stm32Gpio *s, unsigned pin)
+{
     /* Simplify extract logic by combining both 32 bit regiters into
      * one 64 bit value.
      */
@@ -105,7 +103,24 @@ static uint8_t stm32_gpio_get_pin_config(Stm32Gpio *s, unsigned pin) {
     return extract64(cr_64, pin * 4, 4);
 }
 
+/* TODO: perhaps this should be a function in STM32 for all periphs (like
+ * existing RCC routine)
+ */
+static void stm32_gpio_check_clock(Stm32Gpio *s)
+{
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(s->periph_clock);
 
+    if(clk) {
+        if(!clock_signal_is_enabled(clk)) {
+            /* I assume writing to a peripheral register while the peripheral clock
+             * is disabled is a bug and give a warning to unsuspecting programmers.
+             * When I made this mistake on real hardware the write had no effect.
+             */
+            hw_error("Warning: You are attempting to use the %s peripheral while "
+                     "its clock is disabled.\n", "GPIO");
+        }
+    }
+}
 
 
 
@@ -204,7 +219,7 @@ static void stm32_gpio_write(void *opaque, hwaddr offset,
 
     assert(size == 4);
 
-    stm32_rcc_check_periph_clk((Stm32Rcc *)s->stm32_rcc, s->periph);
+    stm32_gpio_check_clock(s);
 
     switch (offset) {
         case GPIOx_CRL_OFFSET:
@@ -303,8 +318,6 @@ static int stm32_gpio_init(SysBusDevice *dev)
     unsigned pin;
     Stm32Gpio *s = FROM_SYSBUS(Stm32Gpio, dev);
 
-    s->stm32_rcc = (Stm32Rcc *)s->stm32_rcc_prop;
-
     memory_region_init_io(&s->iomem, &stm32_gpio_ops, s,
                           "gpio", 0x03ff);
     sysbus_init_mmio(dev, &s->iomem);
@@ -319,11 +332,12 @@ static int stm32_gpio_init(SysBusDevice *dev)
     return 0;
 }
 
-static Property stm32_gpio_properties[] = {
-    DEFINE_PROP_PERIPH_T("periph", Stm32Gpio, periph, STM32_PERIPH_UNDEFINED),
-    DEFINE_PROP_PTR("stm32_rcc", Stm32Gpio, stm32_rcc_prop),
-    DEFINE_PROP_END_OF_LIST()
-};
+static void stm32_gpio_instance_init(Object *obj)
+{
+    Stm32Gpio *s = STM32_GPIO(obj);
+    object_property_add_link(obj, "periph-clock", TYPE_CLOCK_SIGNAL_DEVICE,
+                                     (Object **)&s->periph_clock, NULL);
+}
 
 static void stm32_gpio_class_init(ObjectClass *klass, void *data)
 {
@@ -332,13 +346,13 @@ static void stm32_gpio_class_init(ObjectClass *klass, void *data)
 
     k->init = stm32_gpio_init;
     dc->reset = stm32_gpio_reset;
-    dc->props = stm32_gpio_properties;
 }
 
 static TypeInfo stm32_gpio_info = {
     .name  = TYPE_STM32_GPIO,
     .parent = TYPE_SYS_BUS_DEVICE,
     .instance_size  = sizeof(Stm32Gpio),
+    .instance_init = stm32_gpio_instance_init,
     .class_init = stm32_gpio_class_init
 };
 

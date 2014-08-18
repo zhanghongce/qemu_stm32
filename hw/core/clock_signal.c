@@ -27,6 +27,11 @@ void clock_signal_set_enabled(ClockSignalDevice *clk, bool enabled)
     object_property_set_bool(OBJECT(clk), enabled, "enabled", NULL);
 }
 
+bool clock_signal_is_enabled(ClockSignalDevice *clk)
+{
+    return object_property_get_bool(OBJECT(clk), "enabled", NULL);
+}
+
 void clock_signal_set_max_freq(ClockSignalDevice *clk, clkfreq max_freq)
 {
     object_property_set_int(OBJECT(clk), max_freq, "max-freq", NULL);

@@ -209,7 +209,8 @@ struct Stm32Rcc {
         *pclk2, /* Output from APB2 Prescaler */
         *gpio_clk[STM32_GPIO_COUNT],
         *afio_clk,
-        *uart_clk[STM32_UART_COUNT];
+        *uart_clk[STM32_UART_COUNT],
+        *PERIPHCLK[100];
 
     Clk
         HSECLK,
@@ -221,28 +222,19 @@ struct Stm32Rcc {
         PLLCLK,
         HCLK, /* Output from AHB Prescaler */
         PCLK1, /* Output from APB1 Prescaler */
-        PCLK2, /* Output from APB2 Prescaler */
-        PERIPHCLK[STM32_PERIPH_COUNT];
+        PCLK2; /* Output from APB2 Prescaler */
 
     qemu_irq irq;
 };
 
-
-
-/* HELPER FUNCTIONS */
-
 /* Enable the peripheral clock if the specified bit is set in the value. */
-static void stm32_rcc_periph_enable(
-                    Stm32Rcc *s,
+static void stm32_rcc_set_periph_enabled(
+                    ClockTreeNode *clk,
                     uint32_t new_value,
-                    bool init,
-                    int periph,
                     uint32_t bit_pos)
 {
-    clktree_set_enabled(s->PERIPHCLK[periph], new_value & BIT(bit_pos));
+    clock_signal_set_enabled(CLOCK_SIGNAL_DEVICE(clk), new_value & BIT(bit_pos));
 }
-
-
 
 
 
@@ -402,44 +394,29 @@ static void stm32_rcc_RCC_CFGR_write(Stm32Rcc *s, uint32_t new_value, bool init)
 
 /* Write the APB2 peripheral clock enable register
  * Enables/Disables the peripheral clocks based on each bit. */
-static void stm32_rcc_RCC_APB2ENR_write(Stm32Rcc *s, uint32_t new_value,
-                                        bool init)
+static void stm32_rcc_RCC_APB2ENR_write(Stm32Rcc *s, uint32_t new_value)
 {
-    stm32_rcc_periph_enable(s, new_value, init, STM32_UART1,
-                            RCC_APB2ENR_USART1EN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOE,
-                            RCC_APB2ENR_IOPEEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOD,
-                            RCC_APB2ENR_IOPDEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOC,
-                            RCC_APB2ENR_IOPCEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOB,
-                            RCC_APB2ENR_IOPBEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOA,
-                            RCC_APB2ENR_IOPAEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_AFIO_PERIPH,
-                            RCC_APB2ENR_AFIOEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOG,
-                            RCC_APB2ENR_IOPGEN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_GPIOF,
-                            RCC_APB2ENR_IOPFEN_BIT);
+    stm32_rcc_set_periph_enabled(s->uart_clk[0], new_value, RCC_APB2ENR_USART1EN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[4], new_value, RCC_APB2ENR_IOPEEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[3], new_value, RCC_APB2ENR_IOPDEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[2], new_value, RCC_APB2ENR_IOPCEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[1], new_value, RCC_APB2ENR_IOPBEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[0], new_value, RCC_APB2ENR_IOPAEN_BIT);
+    stm32_rcc_set_periph_enabled(s->afio_clk, new_value, RCC_APB2ENR_AFIOEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[6], new_value, RCC_APB2ENR_IOPGEN_BIT);
+    stm32_rcc_set_periph_enabled(s->gpio_clk[5], new_value, RCC_APB2ENR_IOPFEN_BIT);
 
     s->RCC_APB2ENR = new_value & 0x0000fffd;
 }
 
 /* Write the APB1 peripheral clock enable register
  * Enables/Disables the peripheral clocks based on each bit. */
-static void stm32_rcc_RCC_APB1ENR_write(Stm32Rcc *s, uint32_t new_value,
-                    bool init)
+static void stm32_rcc_RCC_APB1ENR_write(Stm32Rcc *s, uint32_t new_value)
 {
-    stm32_rcc_periph_enable(s, new_value, init, STM32_UART5,
-                            RCC_APB1ENR_USART5EN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_UART4,
-                            RCC_APB1ENR_USART4EN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_UART3,
-                            RCC_APB1ENR_USART3EN_BIT);
-    stm32_rcc_periph_enable(s, new_value, init, STM32_UART2,
-                            RCC_APB1ENR_USART2EN_BIT);
+    stm32_rcc_set_periph_enabled(s->uart_clk[4], new_value, RCC_APB1ENR_USART5EN_BIT);
+    stm32_rcc_set_periph_enabled(s->uart_clk[3], new_value, RCC_APB1ENR_USART4EN_BIT);
+    stm32_rcc_set_periph_enabled(s->uart_clk[2], new_value, RCC_APB1ENR_USART3EN_BIT);
+    stm32_rcc_set_periph_enabled(s->uart_clk[1], new_value, RCC_APB1ENR_USART2EN_BIT);
 
     s->RCC_APB1ENR = new_value & 0x00005e7d;
 }
@@ -532,10 +509,10 @@ static void stm32_rcc_writew(void *opaque, hwaddr offset,
             STM32_NOT_IMPL_REG(offset, 4);
             break;
         case RCC_APB2ENR_OFFSET:
-            stm32_rcc_RCC_APB2ENR_write(s, value, false);
+            stm32_rcc_RCC_APB2ENR_write(s, value);
             break;
         case RCC_APB1ENR_OFFSET:
-            stm32_rcc_RCC_APB1ENR_write(s, value, false);
+            stm32_rcc_RCC_APB1ENR_write(s, value);
             break;
         case RCC_BDCR_OFFSET:
             stm32_rcc_RCC_BDCR_write(s, value, false);
@@ -628,8 +605,8 @@ static void stm32_rcc_reset(DeviceState *dev)
 
     stm32_rcc_RCC_CR_write(s, 0x00000083, true);
     stm32_rcc_RCC_CFGR_write(s, 0x00000000, true);
-    stm32_rcc_RCC_APB2ENR_write(s, 0x00000000, true);
-    stm32_rcc_RCC_APB1ENR_write(s, 0x00000000, true);
+    s->RCC_APB1ENR = 0;
+    s->RCC_APB2ENR = 0;
     stm32_rcc_RCC_BDCR_write(s, 0x00000000, true);
     stm32_rcc_RCC_CSR_write(s, 0x0c000000, true);
 }
@@ -675,11 +652,11 @@ static void stm32_rcc_hclk_upd_irq_handler(void *opaque, int n, int level)
 
 void stm32_rcc_check_periph_clk(Stm32Rcc *s, stm32_periph_t periph)
 {
-    Clk clk = s->PERIPHCLK[periph];
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(s->PERIPHCLK[periph]);
 
     assert(clk != NULL);
 
-    if(!clktree_is_enabled(clk)) {
+    if(!clock_signal_is_enabled(clk)) {
         /* I assume writing to a peripheral register while the peripheral clock
          * is disabled is a bug and give a warning to unsuspecting programmers.
          * When I made this mistake on real hardware the write had no effect.
@@ -694,24 +671,18 @@ void stm32_rcc_set_periph_clk_irq(
         stm32_periph_t periph,
         qemu_irq periph_irq)
 {
-    Clk clk = s->PERIPHCLK[periph];
-
-    assert(clk != NULL);
-
-    clktree_adduser(clk, periph_irq);
+    /* Need to work on this? */
 }
 
 uint32_t stm32_rcc_get_periph_freq(
         Stm32Rcc *s,
         stm32_periph_t periph)
 {
-    Clk clk;
-
-    clk = s->PERIPHCLK[periph];
+    ClockSignalDevice *clk = CLOCK_SIGNAL_DEVICE(s->PERIPHCLK[periph]);
 
     assert(clk != NULL);
 
-    return clktree_get_output_freq(clk);
+    return clock_signal_get_output_freq(clk);
 }
 
 
@@ -804,28 +775,11 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
 
     s->pclk1 = new_clock_tree_node(clock_tree, "pclk1",
             CLOCK_SIGNAL_DEVICE(s->hclk), 0, 1, true);
-    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 72000000);
+    clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 36000000);
 
     s->pclk2 = new_clock_tree_node(clock_tree, "pclk2",
             CLOCK_SIGNAL_DEVICE(s->hclk), 0, 1, true);
     clock_signal_set_max_freq(CLOCK_SIGNAL_DEVICE(s->hclk), 72000000);
-
-    /* Peripheral clocks */
-    s->PERIPHCLK[STM32_GPIOA] = clktree_create_clk("GPIOA", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOB] = clktree_create_clk("GPIOB", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOC] = clktree_create_clk("GPIOC", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOD] = clktree_create_clk("GPIOD", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOE] = clktree_create_clk("GPIOE", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOF] = clktree_create_clk("GPIOF", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_GPIOG] = clktree_create_clk("GPIOG", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-
-    s->PERIPHCLK[STM32_AFIO_PERIPH] = clktree_create_clk("AFIO", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-
-    s->PERIPHCLK[STM32_UART1] = clktree_create_clk("UART1", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK2, NULL);
-    s->PERIPHCLK[STM32_UART2] = clktree_create_clk("UART2", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
-    s->PERIPHCLK[STM32_UART3] = clktree_create_clk("UART3", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
-    s->PERIPHCLK[STM32_UART4] = clktree_create_clk("UART4", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
-    s->PERIPHCLK[STM32_UART5] = clktree_create_clk("UART5", 1, 1, false, CLKTREE_NO_MAX_FREQ, 0, s->PCLK1, NULL);
 
     s->gpio_clk[0] = stm32_rcc_new_periph_clk(clock_tree, "gpio[a]", s->pclk2);
     s->gpio_clk[1] = stm32_rcc_new_periph_clk(clock_tree, "gpio[b]", s->pclk2);
@@ -842,6 +796,24 @@ static void stm32_rcc_init_clk(Stm32Rcc *s)
     s->uart_clk[2] = stm32_rcc_new_periph_clk(clock_tree, "uart[3]", s->pclk1);
     s->uart_clk[3] = stm32_rcc_new_periph_clk(clock_tree, "uart[4]", s->pclk1);
     s->uart_clk[4] = stm32_rcc_new_periph_clk(clock_tree, "uart[5]", s->pclk1);
+
+
+    /* Stop-gap to be removed */
+    s->PERIPHCLK[STM32_GPIOA] = s->gpio_clk[0];
+    s->PERIPHCLK[STM32_GPIOB] = s->gpio_clk[1];
+    s->PERIPHCLK[STM32_GPIOC] = s->gpio_clk[2];
+    s->PERIPHCLK[STM32_GPIOD] = s->gpio_clk[3];
+    s->PERIPHCLK[STM32_GPIOE] = s->gpio_clk[4];
+    s->PERIPHCLK[STM32_GPIOF] = s->gpio_clk[5];
+    s->PERIPHCLK[STM32_GPIOG] = s->gpio_clk[6];
+
+    s->PERIPHCLK[STM32_AFIO_PERIPH] = s->afio_clk;
+
+    s->PERIPHCLK[STM32_UART1] = s->uart_clk[0];
+    s->PERIPHCLK[STM32_UART2] = s->uart_clk[1];
+    s->PERIPHCLK[STM32_UART3] = s->uart_clk[2];
+    s->PERIPHCLK[STM32_UART4] = s->uart_clk[3];
+    s->PERIPHCLK[STM32_UART5] = s->uart_clk[4];
 }
 
 

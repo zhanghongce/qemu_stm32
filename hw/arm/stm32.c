@@ -20,6 +20,7 @@
  */
 
 #include "hw/arm/stm32.h"
+#include "hw/clock_signal.h"
 #include "exec/address-spaces.h"
 #include "exec/gdbstub.h"
 
@@ -120,6 +121,21 @@ static DeviceState *stm32_init_periph(DeviceState *dev, stm32_periph_t periph,
     return dev;
 }
 
+static DeviceState *stm32_create_gpio_dev(
+        Object *stm32_container,
+        const char *name,
+        DeviceState *rcc_dev,
+        hwaddr addr)
+{
+    Object *clk_tree_obj = object_resolve_path_component(OBJECT(rcc_dev), "clock-tree");
+    Object *clk_obj = object_resolve_path_component(clk_tree_obj, name);
+    DeviceState *gpio_dev = qdev_create(NULL, TYPE_STM32_GPIO);
+    object_property_set_link(OBJECT(gpio_dev), clk_obj, "periph-clock", NULL);
+    object_property_add_child(stm32_container, name, OBJECT(gpio_dev), NULL);
+    stm32_init_periph(gpio_dev, -1, addr, NULL);
+    return gpio_dev;
+}
+
 static void stm32_create_uart_dev(
         Object *stm32_container,
         stm32_periph_t periph,
@@ -152,7 +168,6 @@ void stm32_init(
     MemoryRegion *address_space_mem = get_system_memory();
     MemoryRegion *flash_alias_mem = g_malloc(sizeof(MemoryRegion));
     qemu_irq *pic;
-    int i;
 
     Object *stm32_container = container_get(qdev_get_machine(), "/stm32");
 
@@ -189,16 +204,13 @@ void stm32_init(
     stm32_init_periph(rcc_dev, STM32_RCC, 0x40021000, pic[STM32_RCC_IRQ]);
 
     DeviceState **gpio_dev = (DeviceState **)g_malloc0(sizeof(DeviceState *) * STM32_GPIO_COUNT);
-    for(i = 0; i < STM32_GPIO_COUNT; i++) {
-        char child_name[8];
-        stm32_periph_t periph = STM32_GPIOA + i;
-        gpio_dev[i] = qdev_create(NULL, TYPE_STM32_GPIO);
-        QDEV_PROP_SET_PERIPH_T(gpio_dev[i], "periph", periph);
-        qdev_prop_set_ptr(gpio_dev[i], "stm32_rcc", rcc_dev);
-        snprintf(child_name, sizeof(child_name), "gpio[%c]", 'a' + i);
-        object_property_add_child(stm32_container, child_name, OBJECT(gpio_dev[i]), NULL);
-        stm32_init_periph(gpio_dev[i], periph, 0x40010800 + (i * 0x400), NULL);
-    }
+    gpio_dev[0] = stm32_create_gpio_dev(stm32_container, "gpio[a]", rcc_dev, 0x40010800);
+    gpio_dev[1] = stm32_create_gpio_dev(stm32_container, "gpio[b]", rcc_dev, 0x40010c00);
+    gpio_dev[2] = stm32_create_gpio_dev(stm32_container, "gpio[c]", rcc_dev, 0x40011000);
+    gpio_dev[3] = stm32_create_gpio_dev(stm32_container, "gpio[d]", rcc_dev, 0x40011400);
+    gpio_dev[4] = stm32_create_gpio_dev(stm32_container, "gpio[e]", rcc_dev, 0x40011800);
+    gpio_dev[5] = stm32_create_gpio_dev(stm32_container, "gpio[f]", rcc_dev, 0x40011c00);
+    gpio_dev[6] = stm32_create_gpio_dev(stm32_container, "gpio[g]", rcc_dev, 0x40012000);
 
     DeviceState *exti_dev = qdev_create(NULL, TYPE_STM32_EXTI);
     object_property_add_child(stm32_container, "exti", OBJECT(exti_dev), NULL);
