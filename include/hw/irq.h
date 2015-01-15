@@ -67,7 +67,5 @@ typedef struct IRQInterceptData {
 
 void qemu_irq_intercept_in(qemu_irq *gpio_in, qemu_irq_handler handler,
                            int id, int n);
-void qemu_irq_intercept_out(qemu_irq **gpio_out, qemu_irq_handler handler,
-                            int id, int n);
 
 #endif

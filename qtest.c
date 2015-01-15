@@ -28,6 +28,7 @@ static DeviceState *irq_intercept_dev = NULL;
 static FILE *qtest_log_fp;
 static CharDriverState *qtest_chr;
 static GString *inbuf;
+static int irq_levels[MAX_IRQ];
 static qemu_timeval start_time;
 static bool qtest_opened;
 
@@ -205,7 +206,7 @@ static void GCC_FMT_ATTR(2, 3) qtest_send(CharDriverState *chr,
 
 static void qtest_irq_handler(void *opaque, int n, int level)
 {
-    IRQInterceptData *intercept_data = opaque;
+    IRQInterceptData *intercept_data = *(qemu_irq *)opaque;
     qemu_irq *old_irqs = intercept_data->old_irqs;
     qemu_set_irq(old_irqs[n], level);
     CharDriverState *chr = qtest_chr;
@@ -265,43 +266,24 @@ static void qtest_process_command(CharDriverState *chr, gchar **words)
                 continue;
             }
             if (words[0][14] == 'o') {
-                qemu_irq_intercept_out(&ngl->out, qtest_irq_handler,
-                                       id, ngl->num_out);
+                int i;
+                for (i = 0; i < ngl->num_out; ++i) {
+                    qemu_irq *disconnected = g_new0(qemu_irq, 1);
+                    qemu_irq icpt = qemu_allocate_irq(qtest_irq_handler,
+                                                      disconnected, i);
+
+                    *disconnected = qdev_intercept_gpio_out(dev, icpt,
+                                                            ngl->name, i);
+                }
             } else {
                 qemu_irq_intercept_in(ngl->in, qtest_irq_handler,
-                                      id, ngl->num_in);
+                                      ngl->num_in);
             }
         }
         irq_intercept_dev = dev;
         qtest_send_prefix(chr);
         qtest_send(chr, "OK\n");
 
-    } else if (strcmp(words[0], "set_irq_in") == 0) {
-        DeviceState *dev;
-        qemu_irq irq;
-        unsigned n, level;
-
-        g_assert(words[1]);
-        dev = DEVICE(object_resolve_path(words[1], NULL));
-        if (!dev) {
-            qtest_send_prefix(chr);
-            qtest_send(chr, "FAIL Unknown device\n");
-            return;
-        }
-
-        g_assert(words[2]);
-        n = strtoul(words[2], NULL, 0);
-        irq = qdev_get_gpio_in(dev, n);
-
-        g_assert(words[3]);
-        if (strcmp(words[3], "raise") == 0) {
-            level = 1;
-        } else {
-            level = 0;
-        }
-        qemu_set_irq(irq, level);
-
-        qtest_send(chr, "OK\n");
     } else if (strcmp(words[0], "outb") == 0 ||
                strcmp(words[0], "outw") == 0 ||
                strcmp(words[0], "outl") == 0) {
@@ -506,6 +488,8 @@ static int qtest_can_read(void *opaque)
 
 static void qtest_event(void *opaque, int event)
 {
+    int i;
+
     switch (event) {
     case CHR_EVENT_OPENED:
         /*
@@ -514,6 +498,9 @@ static void qtest_event(void *opaque, int event)
          * used.  Injects an extra reset even when it's not used, and
          * that can mess up tests, e.g. -boot once.
          */
+        for (i = 0; i < ARRAY_SIZE(irq_levels); i++) {
+            irq_levels[i] = 0;
+        }
         qemu_gettimeofday(&start_time);
         qtest_opened = true;
         if (qtest_log_fp) {
@@ -535,10 +522,16 @@ static void qtest_event(void *opaque, int event)
     }
 }
 
-int qtest_init_accel(MachineClass *mc)
+static void configure_qtest_icount(const char *options)
 {
-    configure_icount("0");
+    QemuOpts *opts  = qemu_opts_parse(qemu_find_opts("icount"), options, 1);
+    configure_icount(opts, &error_abort);
+    qemu_opts_del(opts);
+}
 
+static int qtest_init_accel(MachineState *ms)
+{
+    configure_qtest_icount("0");
     return 0;
 }
 
@@ -554,11 +547,6 @@ void qtest_init(const char *qtest_chrdev, const char *qtest_log, Error **errp)
         return;
     }
 
-    qemu_chr_add_handlers(chr, qtest_can_read, qtest_read, qtest_event, chr);
-    qemu_chr_fe_set_echo(chr, true);
-
-    inbuf = g_string_new("");
-
     if (qtest_log) {
         if (strcmp(qtest_log, "none") != 0) {
             qtest_log_fp = fopen(qtest_log, "w+");
@@ -567,6 +555,10 @@ void qtest_init(const char *qtest_chrdev, const char *qtest_log, Error **errp)
         qtest_log_fp = stderr;
     }
 
+    qemu_chr_add_handlers(chr, qtest_can_read, qtest_read, qtest_event, chr);
+    qemu_chr_fe_set_echo(chr, true);
+
+    inbuf = g_string_new("");
     qtest_chr = chr;
 }
 
@@ -574,3 +566,27 @@ bool qtest_driver(void)
 {
     return qtest_chr;
 }
+
+static void qtest_accel_class_init(ObjectClass *oc, void *data)
+{
+    AccelClass *ac = ACCEL_CLASS(oc);
+    ac->name = "QTest";
+    ac->available = qtest_available;
+    ac->init_machine = qtest_init_accel;
+    ac->allowed = &qtest_allowed;
+}
+
+#define TYPE_QTEST_ACCEL ACCEL_CLASS_NAME("qtest")
+
+static const TypeInfo qtest_accel_type = {
+    .name = TYPE_QTEST_ACCEL,
+    .parent = TYPE_ACCEL,
+    .class_init = qtest_accel_class_init,
+};
+
+static void qtest_type_init(void)
+{
+    type_register_static(&qtest_accel_type);
+}
+
+type_init(qtest_type_init);

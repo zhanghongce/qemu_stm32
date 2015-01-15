@@ -115,7 +115,7 @@ static void socket_accept(SocketInfo *socket_info)
     }
     close(sock);
 
-    socket_info->fd = ret;
+    return ret;
 }
 
 static void kill_qemu(QTestState *s)
@@ -223,6 +223,10 @@ QTestState *qtest_init(const char *extra_args, int num_serial_ports)
     for(i = 0; i < num_serial_ports; i++) {
         socket_accept(&s->serial_port_sockets[i]);
     }
+    unlink(socket_path);
+    unlink(qmp_socket_path);
+    g_free(socket_path);
+    g_free(qmp_socket_path);
 
     s->rx = g_string_new("");
 
@@ -780,6 +784,18 @@ void qtest_memwrite(QTestState *s, uint64_t addr, const void *data, size_t size)
     qtest_rsp(s, 0);
 }
 
+void qtest_memset(QTestState *s, uint64_t addr, uint8_t pattern, size_t size)
+{
+    size_t i;
+
+    qtest_sendf(s, "write 0x%" PRIx64 " 0x%zx 0x", addr, size);
+    for (i = 0; i < size; i++) {
+        qtest_sendf(s, "%02x", pattern);
+    }
+    qtest_sendf(s, "\n");
+    qtest_rsp(s, 0);
+}
+
 void write_serial_port(int serial_port_num, const char *fmt, ...)
 {
     va_list ap;
@@ -809,4 +825,52 @@ void qmp_discard_response(const char *fmt, ...)
     va_start(ap, fmt);
     qtest_qmpv_discard_response(global_qtest, fmt, ap);
     va_end(ap);
+}
+
+bool qtest_big_endian(void)
+{
+    const char *arch = qtest_get_arch();
+    int i;
+
+    static const struct {
+        const char *arch;
+        bool big_endian;
+    } endianness[] = {
+        { "aarch64", false },
+        { "alpha", false },
+        { "arm", false },
+        { "cris", false },
+        { "i386", false },
+        { "lm32", true },
+        { "m68k", true },
+        { "microblaze", true },
+        { "microblazeel", false },
+        { "mips", true },
+        { "mips64", true },
+        { "mips64el", false },
+        { "mipsel", false },
+        { "moxie", true },
+        { "or32", true },
+        { "ppc", true },
+        { "ppc64", true },
+        { "ppcemb", true },
+        { "s390x", true },
+        { "sh4", false },
+        { "sh4eb", true },
+        { "sparc", true },
+        { "sparc64", true },
+        { "unicore32", false },
+        { "x86_64", false },
+        { "xtensa", false },
+        { "xtensaeb", true },
+        {},
+    };
+
+    for (i = 0; endianness[i].arch; i++) {
+        if (strcmp(endianness[i].arch, arch) == 0) {
+            return endianness[i].big_endian;
+        }
+    }
+
+    return false;
 }
