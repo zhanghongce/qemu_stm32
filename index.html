@@ -2,23 +2,13 @@
 <html>
 
   <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Qemu STM32 : QEMU with an STM32 microcontroller implementation" />
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Qemu STM32 : QEMU with an STM32 microcontroller implementation">
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
     <title>Qemu STM32</title>
-    <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50803151-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
   </head>
 
   <body>
@@ -41,14 +31,15 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <p>This is a fork of the QEMU emulator which includes an implementation of the STM32 microcontroller.  I have not been actively working on this project but will try to when I have time.  I welcome any source code contributions.</p>
+        <h1>
+<a id="functionality" class="anchor" href="#functionality" aria-hidden="true"><span class="octicon octicon-link"></span></a>Functionality</h1>
 
-<p>I have not yet submitted any patches to QEMU mainstream for a couple of reasons:</p>
+<p>Coming soon...</p>
 
-<ol>
-<li>This project is still in a state of flux, and I would like the flexibility to change it without going through a patch process.</li>
-<li>I suspect it will take some time and effort to go through the submission process - time I would rather put into the project itself.  I have also made changes to the core framework, which may not be acceptable in the main QEMU branch or which will need to be modified.  I don't see much disadvantage to leaving this as a fork.  That being said, there are core components that could benefit other parts of QEMU (i.e. The clock tree objects and unit testing framework) that should be submitted.</li>
-</ol><p>Goals (in no particular order):</p>
+<h1>
+<a id="goals" class="anchor" href="#goals" aria-hidden="true"><span class="octicon octicon-link"></span></a>Goals</h1>
+
+<p>High level goals (in no particular order):</p>
 
 <ul>
 <li>Make compliant with the new QOM framework.  Make use of properties as much as possible to provide visibility into the virtual machine.  For example, the UARTs can have properties indicating their baud rate and configuration.  Also, provide properties to be used for simulating exceptional situations.  For example, the UART could provide properties used to simulate parity and framing errors.  These properties provide debugging advantages over bare hardware and may even allow for automated testing.</li>
@@ -57,6 +48,27 @@
 <li>Continue to add new STM32 peripherals (SPI, timers, etc.) and enhance existing peripherals.</li>
 <li>Add new development boards, for example the low cost STM32 discovery boards.  Someone has also suggested supporting the CrazyFlie Nano Quadcopter.  Also add support for the Cortex M4 architecture.</li>
 </ul>
+
+<h1>
+<a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a>Status</h1>
+
+<p>I am not actively developing new functionality, but I perform maintenance as I have time, including:</p>
+
+<ul>
+<li>Merging in patches from contributors.</li>
+<li>Merging in new releases of QEMU.</li>
+<li>Fixing defects.</li>
+<li>Responding to questions.</li>
+</ul>
+
+<p>I welcome any source code contributions.</p>
+
+<p>I have not yet submitted any patches to QEMU mainstream for a couple of reasons:</p>
+
+<ol>
+<li>This project is still in a state of flux, and I would like the flexibility to change it without going through a patch process.</li>
+<li>I suspect it will take some time and effort to go through the submission process - time I would rather put into the project itself.  I have also made changes to the core framework, which may not be acceptable in the main QEMU branch or which will need to be modified.  I don't see much disadvantage to leaving this as a fork.  That being said, there are core components that could benefit other parts of QEMU (i.e. The clock tree objects and unit testing framework) that should be submitted.</li>
+</ol>
       </section>
     </div>
 
