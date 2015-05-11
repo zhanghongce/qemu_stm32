@@ -94,19 +94,20 @@ These are considered to be relatively stable, and at least minimally tested.</p>
 <li>Add new development boards, for example the low cost STM32 discovery boards.  Someone has also suggested supporting the CrazyFlie Nano Quadcopter.  Also add support for the Cortex M4 architecture.</li>
 </ul>
 
+<p>I have started a <a href="https://github.com/beckus/qemu_stm32/wiki/To-Do">wiki page with a to-do list</a>, much of which will never become reality.</p>
+
 <h1>
 <a id="status" class="anchor" href="#status" aria-hidden="true"><span class="octicon octicon-link"></span></a>Status</h1>
 
-<p>I am not actively developing new functionality, but I perform maintenance as I have time, including:</p>
+<p>With a few exceptions, I am not actively developing new functionality.  But I do perform maintenance as I have time, including:</p>
 
 <ul>
 <li>Merging in patches from contributors.</li>
 <li>Merging in new releases of QEMU.</li>
 <li>Fixing defects.</li>
+<li>Making occasional limited changes.</li>
 <li>Responding to questions.</li>
 </ul>
-
-<p>I welcome any source code contributions.</p>
 
 <p>I have not yet submitted any patches to QEMU mainstream for a couple of reasons:</p>
 
@@ -114,6 +115,19 @@ These are considered to be relatively stable, and at least minimally tested.</p>
 <li>This project is still in a state of flux, and I would like the flexibility to change it without going through a patch process.</li>
 <li>I suspect it will take some time and effort to go through the submission process - time I would rather put into the project itself.  I have also made changes to the core framework, which may not be acceptable in the main QEMU branch or which will need to be modified.  I don't see much disadvantage to leaving this as a fork.  That being said, there are core components that could benefit other parts of QEMU (i.e. The clock tree objects and unit testing framework) that should be submitted.</li>
 </ol>
+
+<h1>
+<a id="contributions" class="anchor" href="#contributions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contributions</h1>
+
+<p>I welcome and encourage any source code contributions.</p>
+
+<p>Thank you to the following people for submitting patches:</p>
+
+<ul>
+<li><a href="https://github.com/hankhank">hankhank</a></li>
+<li><a href="https://github.com/krasin">krasin</a></li>
+<li><a href="https://github.com/mv0">mv0</a></li>
+</ul>
       </section>
     </div>
 
