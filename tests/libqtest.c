@@ -195,9 +195,9 @@ QTestState *qtest_init(const char *extra_args, int num_serial_ports)
         init_socket(&s->serial_port_sockets[i]);
     }
 
-    s->qemu_pid = fork();
-    if (s->qemu_pid == 0) {
-        command = g_strdup_printf("exec %s "
+    //s->qemu_pid = fork();
+    //if (s->qemu_pid == 0) {
+        command = g_strdup_printf("%s "
                                   "-qtest unix:%s,nowait "
                                   "-qtest-log %s "
                                   "-qmp unix:%s,nowait "
@@ -213,10 +213,19 @@ QTestState *qtest_init(const char *extra_args, int num_serial_ports)
                                   extra_socket_args->str,
                                   extra_args ?: "",
                                   external_args ?: "");
-        //printf("%s\n", command);
-        execlp("/bin/sh", "sh", "-c", command, NULL);
-        exit(1);
-    }
+        printf("Run this in debugger: %s\n", command);
+        //execlp("/bin/sh", "sh", "-c", command, NULL);
+        //exit(1);
+    //}
+
+    // For this to work, run the test as follows
+    // instead of using "make check-qtest-arm":
+    //   export QTEST_QEMU_BINARY=arm-softmmu/qemu-system-arm
+    //   ./tests/test-stm32
+    printf("Type something to continue:\n");
+    int wait;
+    scanf("%d", &wait);
+    printf("Proceeding...\n");
 
     socket_accept(&s->qtest_socket);
     socket_accept(&s->qmp_socket);
