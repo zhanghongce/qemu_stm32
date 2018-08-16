@@ -1,0 +1,8 @@
+title: Qemu STM32
+description: QEMU with an STM32 microcontroller implementation
+google_analytics: UA-50803151-1
+show_downloads: true
+theme: jekyll-theme-slate
+
+gems:
+  - jekyll-mentions
