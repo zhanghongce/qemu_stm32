@@ -27,6 +27,8 @@ The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with S
 
 # What's New
 
+** Latest changes were lost with GitHub page migration - fix pending **
+
 **July 15, 2016**
 - Added IWDG peripheral implementation.  Thank you to [vinifr](https://github.com/vinifr) for submitting this.  The peripheral is in the stm32 branch but not yet included in a release.
 
