@@ -22,12 +22,19 @@ The latest release of QEMU STM32 includes the following features.  Note that onl
   * [Fixed interrupt handling (specifically for compatibility with FreeRTOS)](https://github.com/beckus/qemu_stm32/commit/88a7608eba13ac882259341ca043c492f7be181c)
 * The [stm32_p103_demos project](https://github.com/beckus/stm32_p103_demos) contains demos that run in this emulator.
 
-The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with STM32 functionality (it was originally based on the QEMU STM32 project).  It is located at: https://github.com/pebble/qemu .  While I have not tried the Pebble emulator, it seems quite extensive, with more peripherals (e.g. I2C and SPI) and the ability to emulate different STM32 families.
+The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with STM32 functionality (it was originally based on the QEMU STM32 project).  It is located at: https://github.com/pebble/qemu .  While I have not tried the Pebble emulator, it seems quite extensive, with more peripherals (e.g. I2C and SPI) and the ability to emulate different STM32 families. **UPDATE: The company that developed Pebble has shut down, and I am not sure if anyone will continue to work on the Pebble emulator. **
 
 
 # What's New
 
-** Latest news was lost with GitHub page migration - fix pending **
+**August 15, 2018**
+- Added support for STM32F103C8 (Blue Pill).  Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
+
+**July 24, 2018**
+The following changes have been added in the stm32 branch, though not yet included in a release.
+- Added Dockerfile to build a container with qemu_stm32 binaries and examples from [stm32_p103_demos](https://github.com/beckus/stm32_p103_demos).  Thank you to [glatard](https://github.com/glatard) for submitting this.
+- Fixes to the RTC interrupt handling.  Thank you to [slaviber](https://github.com/slaviber).
+- Fix build error in recent versions of perl.  Thank you to [benquike](https://github.com/benquike).
 
 **July 15, 2016**
 - Added IWDG peripheral implementation.  Thank you to [vinifr](https://github.com/vinifr) for submitting this.  The peripheral is in the stm32 branch but not yet included in a release.
@@ -77,8 +84,12 @@ I have not yet submitted any patches to QEMU mainstream for a couple of reasons:
 I welcome and encourage any source code contributions.
 
 Thank you to the following people for submitting patches:
+* [baselsayeh](https://github.com/baselsayeh)
+* [benquike](https://github.com/benquike)
+* [glatard](https://github.com/glatard)
 * [hankhank](https://github.com/hankhank)
 * [krasin](https://github.com/krasin)
 * [mv0](https://github.com/mv0)
+* [slaviber](https://github.com/slaviber)
 * [vinifr](https://github.com/vinifr)
 * Hariri Yasser and Fatima Zohra Lahlou (at the Université de Franche-Comté), under the supervision of Jean-Michel Friedt 
