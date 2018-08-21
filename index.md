@@ -17,18 +17,19 @@ The latest release of QEMU STM32 includes the following features.  Note that onl
 * Machines:
   * [Olimex STM32-P103 development board](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_p103.c)
   * [Olimex Olimexino STM32 Maple Development Board](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_maple.c)
+  * [Blue Pill (STM32F103C8)](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_f103c8.c)
 * Changes to core QEMU functionality (in ARMv7 code):
   * [Added external Systick source](https://github.com/beckus/qemu_stm32/commit/3ff4c22bb0d5f73e7bdbb825a38027d12420fe4e)
   * [Fixed interrupt handling (specifically for compatibility with FreeRTOS)](https://github.com/beckus/qemu_stm32/commit/88a7608eba13ac882259341ca043c492f7be181c)
 * The [stm32_p103_demos project](https://github.com/beckus/stm32_p103_demos) contains demos that run in this emulator.
 
-The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with STM32 functionality (it was originally based on the QEMU STM32 project).  It is located at: https://github.com/pebble/qemu .  While I have not tried the Pebble emulator, it seems quite extensive, with more peripherals (e.g. I2C and SPI) and the ability to emulate different STM32 families. **UPDATE: The company that developed Pebble has shut down, and I am not sure if anyone will continue to work on the Pebble emulator. **
+The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with STM32 functionality (it was originally based on the QEMU STM32 project).  It is located at: https://github.com/pebble/qemu .  While I have not tried the Pebble emulator, it seems quite extensive, with more peripherals (e.g. I2C and SPI) and the ability to emulate different STM32 families. **UPDATE: The company that developed Pebble has shut down, and I am not sure if anyone will continue to work on the Pebble emulator.**
 
 
 # What's New
 
 **August 15, 2018**
-- Added support for STM32F103C8 (Blue Pill).  Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
+- Added support for [STM32F103C8 (Blue Pill)](https://wiki.stm32duino.com/index.php?title=Blue_Pill).  Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
 
 **July 24, 2018**
 The following changes have been added in the stm32 branch, though not yet included in a release.
@@ -44,9 +45,9 @@ The following changes have been added in the stm32 branch, though not yet includ
 - Corresponding tests were also added to the [stm32_p103_demos project](https://github.com/beckus/stm32_p103_demos).  The ADC demo now works (previously it only worked on real hardware).
 
 **June 6, 2015 - [Release v0.1.3] (https://github.com/beckus/qemu_stm32/releases/tag/stm32_v0.1.3)**
-- Added timer peripheral (thank you to [hankhank] (https://github.com/hankhank) for writing this)
+- Added timer peripheral (thank you to [hankhank](https://github.com/hankhank) for writing this)
 - Merged in QEMU v2.1.3
-- Fixed bugs in GPIO module (see [commit] (https://github.com/beckus/qemu_stm32/commit/3e846fc6272ea226cd3fa5bd255a71e30be0e9b5) for more details)
+- Fixed bugs in GPIO module (see [commit](https://github.com/beckus/qemu_stm32/commit/3e846fc6272ea226cd3fa5bd255a71e30be0e9b5) for more details)
 - Miscellaneous code cleanup
 
 # Usage
