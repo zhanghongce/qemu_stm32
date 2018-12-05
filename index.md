@@ -28,6 +28,9 @@ The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with S
 
 # What's New
 
+**October 18, 2018**
+- Added CRC peripheral (ported from Pebble project). Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
+
 **August 15, 2018**
 - Added support for [STM32F103C8 (Blue Pill)](https://wiki.stm32duino.com/index.php?title=Blue_Pill).  Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
 
