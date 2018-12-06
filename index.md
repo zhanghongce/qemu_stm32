@@ -28,8 +28,12 @@ The [Pebble Smartwatch](https://www.pebble.com/) also has a QEMU emulator with S
 
 # What's New
 
+**December 5, 2018**
+- Ported DMA peripheral ported from pebble/qemu. See [Pull Request 23](https://github.com/beckus/qemu_stm32/pull/23) for details. Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
+- Improvements to error logging (log to stderr instead of stdout). See [Pull Request 25](https://github.com/beckus/qemu_stm32/pull/25) for details. Thank you to [kousu](https://github.com/kousu) for submitting this.
+
 **October 18, 2018**
-- Added CRC peripheral (ported from Pebble project). Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
+- Ported CRC peripheral from pebble/qemu. See [Pull Request 22](https://github.com/beckus/qemu_stm32/pull/22) for details. Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
 
 **August 15, 2018**
 - Added support for [STM32F103C8 (Blue Pill)](https://wiki.stm32duino.com/index.php?title=Blue_Pill).  Thank you to [baselsayeh](https://github.com/baselsayeh) for submitting this.
@@ -92,6 +96,7 @@ Thank you to the following people for submitting patches:
 * [benquike](https://github.com/benquike)
 * [glatard](https://github.com/glatard)
 * [hankhank](https://github.com/hankhank)
+* [kousu](https://github.com/kousu)
 * [krasin](https://github.com/krasin)
 * [mv0](https://github.com/mv0)
 * [slaviber](https://github.com/slaviber)
