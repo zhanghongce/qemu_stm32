@@ -5,7 +5,9 @@ The latest release of QEMU STM32 includes the following features.  Note that onl
 * Basic [STM32F1 microcontroller](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32.c) with the following peripherals:
   * [ADC](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_adc.c)
   * [AFIO](https://github.com/beckus/qemu_stm32/blob/stm32/hw/gpio/stm32_afio.c)
+  * [CRC](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_crc.c)
   * [DAC](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_dac.c)
+  * [DMA](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_dma.c)
   * [EXTI](https://github.com/beckus/qemu_stm32/blob/stm32/hw/gpio/stm32_exti.c)
   * [GPIO](https://github.com/beckus/qemu_stm32/blob/stm32/hw/gpio/stm32_gpio.c)
   * [IWDG](https://github.com/beckus/qemu_stm32/blob/stm32/hw/arm/stm32_iwdg.c)
