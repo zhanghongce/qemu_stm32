@@ -100,6 +100,7 @@ Thank you to the following people for submitting patches:
 * [glatard](https://github.com/glatard)
 * [hankhank](https://github.com/hankhank)
 * [jmfriedt](https://github.com/jmfriedt)
+* [joshtyler](https://github.com/joshtyler)
 * [kousu](https://github.com/kousu)
 * [krasin](https://github.com/krasin)
 * [mv0](https://github.com/mv0)
