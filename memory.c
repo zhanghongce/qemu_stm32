@@ -1967,12 +1967,15 @@ void address_space_destroy(AddressSpace *as)
 
 bool io_mem_read(MemoryRegion *mr, hwaddr addr, uint64_t *pval, unsigned size)
 {
-    return memory_region_dispatch_read(mr, addr, pval, size);
+    bool ret = memory_region_dispatch_read(mr, addr, pval, size);
+    printf("IO_MEM_READ: %lx %lx\n",addr,*pval);
+    return ret;
 }
 
 bool io_mem_write(MemoryRegion *mr, hwaddr addr,
                   uint64_t val, unsigned size)
-{
+{   
+    printf("IO_MEM_WRITE: %lx %lx\n",addr,val);
     return memory_region_dispatch_write(mr, addr, val, size);
 }
 

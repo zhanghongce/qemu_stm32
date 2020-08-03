@@ -31,7 +31,9 @@
 /* DEFINITIONS*/
 
 /* See README for DEBUG details. */
-//#define DEBUG_STM32_RCC
+#ifndef DEBUG_STM32_RTC
+#define DEBUG_STM32_RTC 1
+#endif
 
 #ifdef DEBUG_STM32_RTC
 #define DPRINTF(fmt, ...)                                       \
@@ -195,6 +197,7 @@ static uint64_t stm32_rtc_read(void *opaque, hwaddr offset,
   
 
     Stm32Rtc *s = (Stm32Rtc *)opaque;
+    uint64_t result;
 
     switch (offset & 0xffffffff) {
 
@@ -207,21 +210,21 @@ static uint64_t stm32_rtc_read(void *opaque, hwaddr offset,
                    PRLL registre");
             return 0;
         case RTC_CRH_OFFSET:
-            return s->RTC_CR[1]; 
+            result = s->RTC_CR[1];  DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_CRL_OFFSET:
-            return s->RTC_CR[0];
+            result = s->RTC_CR[0]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_DIVH_OFFSET:
-            return s->RTC_PRL[1];
+            result = s->RTC_PRL[1]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_DIVL_OFFSET:
-            return s->RTC_PRL[0];
+            result = s->RTC_PRL[0]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_CNTH_OFFSET:
-            return s->RTC_CNT[1];
+            result = s->RTC_CNT[1]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_CNTL_OFFSET:
-            return s->RTC_CNT[0];;
+            result = s->RTC_CNT[0];; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_ALRH_OFFSET:
-            return s->RTC_ALR[1];
+            result = s->RTC_ALR[1]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         case RTC_ALRL_OFFSET:
-	    return s->RTC_ALR[0];
+	    result = s->RTC_ALR[0]; DPRINTF("read %lx %lx\n", offset & 0xffffffff, result); return result;
         default:
             STM32_BAD_REG(offset, size);
             return 0;
@@ -246,7 +249,9 @@ static void stm32_rtc_write(void *opaque, hwaddr offset,
       }       
      /*ongoing writing operation */
     s->RTC_CR[0]&= ~(1 << RTC_CRL_RTOFF_BIT);
- 
+
+    DPRINTF("write to %lx %lx\n", offset & 0xffffffff, value);
+
     switch (offset & 0xffffffff) {
         case RTC_CRH_OFFSET:
             s->RTC_CR[1]=value & 0xffff;

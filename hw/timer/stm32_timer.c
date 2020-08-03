@@ -29,7 +29,9 @@
 /* DEFINITIONS*/
 
 /* See the README file for details on these settings. */
-//#define DEBUG_STM32_TIMER
+#ifndef DEBUG_STM32_TIMER
+#define DEBUG_STM32_TIMER 1
+#endif
 
 #ifdef DEBUG_STM32_TIMER
 #define DPRINTF(fmt, ...)                                       \
@@ -244,67 +246,108 @@ static uint64_t stm32_timer_read(void *opaque, hwaddr offset,
                            unsigned size)
 {
     Stm32Timer *s = (Stm32Timer *)opaque;
+    uint64_t result;
 
     switch (offset) {
     case TIMER_CR1_OFFSET:
         DPRINTF("%s cr1 = %x\n", stm32_periph_name(s->periph), s->cr1);
+        result = s->cr1;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->cr1;
     case TIMER_CR2_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: CR2 not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_SMCR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: SMCR not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_DIER_OFFSET:
         DPRINTF("%s dier = %x\n", stm32_periph_name(s->periph), s->dier);
+        result = s->dier;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->dier;
     case TIMER_SR_OFFSET:
         DPRINTF("%s sr = %x\n", stm32_periph_name(s->periph), s->sr);
+        result = s->sr;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->sr;
     case TIMER_EGR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: EGR write only");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_CCMR1_OFFSET:
         DPRINTF("%s ccmr1 = %x\n", stm32_periph_name(s->periph), s->ccmr1);
+        result = s->ccmr1;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccmr1;
     case TIMER_CCMR2_OFFSET:
         DPRINTF("%s ccmr2 = %x\n", stm32_periph_name(s->periph), s->ccmr2);
+        result = s->ccmr2;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccmr2;
     case TIMER_CCER_OFFSET:
         DPRINTF("%s ccer = %x\n", stm32_periph_name(s->periph), s->ccer);
+        result = s->ccer;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccer;
     case TIMER_CNT_OFFSET:
         //DPRINTF("%s cnt = %x\n", stm32_periph_name(s->periph), stm32_timer_get_count(s));
-        return stm32_timer_get_count(s);
+        result = stm32_timer_get_count(s);
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
+        return result;
     case TIMER_PSC_OFFSET:
         DPRINTF("%s psc = %x\n", stm32_periph_name(s->periph), s->psc);
+        result = s->psc;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->psc;
     case TIMER_ARR_OFFSET:
         DPRINTF("%s arr = %x\n", stm32_periph_name(s->periph), s->arr);
+        result = s->arr;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->arr;
     case TIMER_RCR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: RCR not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_CCR1_OFFSET:
         DPRINTF("%s ccr1 = %x\n", stm32_periph_name(s->periph), s->ccr1);
+        result = s->ccr1;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccr1;
     case TIMER_CCR2_OFFSET:
         DPRINTF("%s ccr2 = %x\n", stm32_periph_name(s->periph), s->ccr2);
+        result = s->ccr2;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccr2;
     case TIMER_CCR3_OFFSET:
         DPRINTF("%s ccr3 = %x\n", stm32_periph_name(s->periph), s->ccr3);
+        result = s->ccr3;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccr3;
     case TIMER_CCR4_OFFSET:
         DPRINTF("%s ccr4 = %x\n", stm32_periph_name(s->periph), s->ccr4);
+        result = s->ccr4;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return s->ccr4;
     case TIMER_BDTR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: BDTR not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_DCR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: DCR not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     case TIMER_DMAR_OFFSET:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32_timer: DMAR not supported");
+        result = 0;
+        DPRINTF("read 0x%lx 0x%lx\n", offset, result);
         return 0;
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
@@ -319,6 +362,8 @@ static void stm32_timer_write(void * opaque, hwaddr offset,
                         uint64_t value, unsigned size)
 {
     Stm32Timer *s = (Stm32Timer *)opaque;
+
+    DPRINTF("write 0x%lx 0x%lx\n", offset, value);
 
     switch (offset) {
     case TIMER_CR1_OFFSET:

@@ -25,7 +25,10 @@
 #include "hw/sysbus.h"
 #include "hw/arm/stm32.h"
 
-//#define DEBUG_STM32_DMA
+#ifndef DEBUG_STM32_DMA
+#define DEBUG_STM32_DMA 1
+#endif
+
 #ifdef DEBUG_STM32_DMA
 
 // NOTE: The usleep() helps the MacOS stdout from freezing when we have a lot of print out
@@ -353,7 +356,7 @@ stm32_dma_read(void *arg, hwaddr addr, unsigned int size)
 	uint64_t result;
 	int stream_no = (addr - 8) >> (DMA_Perstream_Reg_Total_Size/DMA_Perstream_Reg_Size);
 
-	DPRINTF("%s: addr: 0x%llx, size:%d...\n", __func__, addr, size);
+	DPRINTF("%s: addr: 0x%lx, size:%d...\n", __func__, addr, size);
 
 	if (size != 4) {
 		hw_error("stm32 crc only supports 4-byte reads\n");
@@ -386,7 +389,7 @@ stm32_dma_read(void *arg, hwaddr addr, unsigned int size)
 		}
 	}
 
-	DPRINTF("    %s: result:0x%llx\n", __func__, result);
+	DPRINTF("    %s: result:0x%lx\n", __func__, result);
 	return result;
 }
 
@@ -462,13 +465,14 @@ stm32_dma_write(void *arg, hwaddr addr, uint64_t data, unsigned int size)
 		hw_error("stm32 dma: Adreess is not 4 byte Alligned write!\n");
 	}
 
+	DPRINTF("Write to addr : %lx", addr);
 	switch(addr) {
 		case R_DMA_ISR:
-		DPRINTF("%s: register ISR (READ-ONLY), data: 0x%llx\n", __func__, data);
+		DPRINTF("%s: register ISR (READ-ONLY), data: 0x%lx\n", __func__, data);
 		hw_error("stm32 dma: invalid write to ISR\n");
 		break;
 	case R_DMA_IFCR:
-		DPRINTF("%s: register IFCR, data: 0x%llx\n", __func__, data);
+		DPRINTF("%s: register IFCR, data: 0x%lx\n", __func__, data);
 		// Any interrupt clear write to stream x clears all interrupts for that stream
 		s->ifcr = data;
 		break;

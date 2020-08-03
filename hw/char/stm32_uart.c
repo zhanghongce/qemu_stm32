@@ -30,7 +30,12 @@
 /* DEFINITIONS*/
 
 /* See the README file for details on these settings. */
-//#define DEBUG_STM32_UART
+
+#ifndef DEBUG_STM32_UART
+#define DEBUG_STM32_UART 1
+#endif
+
+
 #define STM32_UART_NO_BAUD_DELAY
 //#define STM32_UART_ENABLE_OVERRUN
 
@@ -670,24 +675,25 @@ static uint64_t stm32_uart_read(void *opaque, hwaddr offset,
     uint32_t value;
     int start = (offset & 3) * 8;
     int length = size * 8;
+    uint64_t result;
 
     switch (offset & 0xfffffffc) {
         case USART_SR_OFFSET:
-            return extract64(stm32_uart_USART_SR_read(s), start, length);
+            result = extract64(stm32_uart_USART_SR_read(s), start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_DR_OFFSET:
             stm32_uart_USART_DR_read(s, &value);
-            return extract64(value, start, length);
+            result = extract64(value, start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_BRR_OFFSET:
-            return extract64(s->USART_BRR, start, length);
+            result = extract64(s->USART_BRR, start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_CR1_OFFSET:
-            return extract64(s->USART_CR1, start, length);
+            result = extract64(s->USART_CR1, start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_CR2_OFFSET:
-            return extract64(s->USART_CR2, start, length);
+            result = extract64(s->USART_CR2, start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_CR3_OFFSET:
-            return extract64(s->USART_CR3, start, length);
+            result = extract64(s->USART_CR3, start, length); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         case USART_GTPR_OFFSET:
             STM32_NOT_IMPL_REG(offset, size);
-            return 0;
+            result = 0; DPRINTF("read %lx %lx\n", offset & 0xfffffffc, result); return result;
         default:
             STM32_BAD_REG(offset, size);
             return 0;
@@ -701,6 +707,8 @@ static void stm32_uart_write(void *opaque, hwaddr offset,
     int start = (offset & 3) * 8;
     int length = size * 8;
 
+    DPRINTF("write %lx %lx\n", offset & 0xfffffffc, value);
+    
     stm32_rcc_check_periph_clk((Stm32Rcc *)s->stm32_rcc, s->periph);
 
     switch (offset & 0xfffffffc) {

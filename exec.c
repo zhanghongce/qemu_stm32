@@ -2058,6 +2058,7 @@ bool address_space_rw(AddressSpace *as, hwaddr addr, uint8_t *buf,
     while (len > 0) {
         l = len;
         mr = address_space_translate(as, addr, &addr1, &l, is_write);
+        printf("TRANSLATE: %lx -> %lx\n",addr,addr1);
 
         if (is_write) {
             if (!memory_access_is_direct(mr, is_write)) {
@@ -2593,6 +2594,8 @@ void stl_phys_notdirty(AddressSpace *as, hwaddr addr, uint32_t val)
 
     mr = address_space_translate(as, addr, &addr1, &l,
                                  true);
+    printf("TRANSLATE: %lx -> %lx\n",addr,addr1);
+
     if (l < 4 || !memory_access_is_direct(mr, true)) {
         io_mem_write(mr, addr1, val, 4);
     } else {

@@ -28,6 +28,9 @@
 #include <inttypes.h>
 
 /* DEFINITIONS*/
+#ifndef DEBUG_STM32_ADC
+#define DEBUG_STM32_ADC 1
+#endif
 
 #ifdef DEBUG_STM32_ADC
 #define DPRINTF(fmt, ...)                                       \
@@ -890,28 +893,29 @@ static uint64_t stm32_adc_read(void *opaque, hwaddr offset,
     Stm32Adc *s = (Stm32Adc *)opaque;
     int start = (offset & 3) * 8;
     int length = size * 8;
+    uint64_t res;
 
     switch (offset & 0xfffffffc) {
-        case oADC_SR : 	return (extract64(s->ADC_SR,  start, length));
-        case oADC_CR1: 	return extract64(s->ADC_CR1,  start, length);
-        case oADC_CR2: 	return (extract64(s->ADC_CR2, start, length)&~ADC_CR2_RSTCAL&~ADC_CR2_CAL); // jmf : calibration complete
-        case oADC_SMPR1:return extract64(s->ADC_SMPR1,start, length);
-        case oADC_SMPR2:return extract64(s->ADC_SMPR2,start, length);
-        case oADC_JOFR1:return extract64(s->ADC_JOFR1,start, length);
-	case oADC_JOFR2:return extract64(s->ADC_JOFR2,start, length);
-	case oADC_JOFR3:return extract64(s->ADC_JOFR3,start, length);
-	case oADC_JOFR4:return extract64(s->ADC_JOFR4,start, length);
-	case oADC_HTR: 	return extract64(s->ADC_HTR,  start, length);
-	case oADC_LTR : return extract64(s->ADC_LTR,  start, length);
-	case oADC_SQR1: return extract64(s->ADC_SQR1, start, length);
-	case oADC_SQR2: return extract64(s->ADC_SQR2, start, length);
-	case oADC_SQR3: return extract64(s->ADC_SQR3, start, length);
-	case oADC_JSQR: return extract64(s->ADC_JSQR, start, length);
-	case oADC_JDR1: return extract64(s->ADC_JDR1, start, length);
-	case oADC_JDR2: return extract64(s->ADC_JDR2, start, length);
-	case oADC_JDR3: return extract64(s->ADC_JDR3, start, length);
-	case oADC_JDR4: return extract64(s->ADC_JDR4, start, length);
-	case oADC_DR  : return extract64(stm32_ADC_DR_read(s), start, length); 
+        case oADC_SR : 	res = (extract64(s->ADC_SR,  start, length)); DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_CR1: 	res = extract64(s->ADC_CR1,  start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_CR2: 	res = (extract64(s->ADC_CR2, start, length) &~ADC_CR2_RSTCAL&~ADC_CR2_CAL);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_SMPR1:res = extract64(s->ADC_SMPR1,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_SMPR2:res = extract64(s->ADC_SMPR2,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JOFR1:res = extract64(s->ADC_JOFR1,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JOFR2:res = extract64(s->ADC_JOFR2,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JOFR3:res = extract64(s->ADC_JOFR3,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JOFR4:res = extract64(s->ADC_JOFR4,start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_HTR: 	res = extract64(s->ADC_HTR,  start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_LTR : res = extract64(s->ADC_LTR,  start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_SQR1: res = extract64(s->ADC_SQR1, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_SQR2: res = extract64(s->ADC_SQR2, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_SQR3: res = extract64(s->ADC_SQR3, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JSQR: res = extract64(s->ADC_JSQR, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JDR1: res = extract64(s->ADC_JDR1, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JDR2: res = extract64(s->ADC_JDR2, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JDR3: res = extract64(s->ADC_JDR3, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_JDR4: res = extract64(s->ADC_JDR4, start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
+        case oADC_DR  : res = extract64(stm32_ADC_DR_read(s), start, length);  DPRINTF("read %lx %lx\n", offset & 0xfffffffc, res); return res;
         default:
 		fprintf(stderr, "jmf unknown read : %lld, size %d\n",(long long)offset,size);
             STM32_BAD_REG(offset, size);
@@ -925,6 +929,7 @@ static void stm32_adc_write(void *opaque, hwaddr offset,
     Stm32Adc *s = (Stm32Adc *)opaque;
     
     stm32_rcc_check_periph_clk((Stm32Rcc *)s->stm32_rcc, s->periph);
+    DPRINTF("write %lx %lx\n", offset & 0xfffffffc, value);
 
     switch (offset & 0xfffffffc) {
         case oADC_SR : stm32_ADC_SR_write(s,value);break;

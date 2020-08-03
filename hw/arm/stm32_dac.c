@@ -27,6 +27,9 @@
 #include <inttypes.h>
 
 /* DEFINITIONS*/
+#ifndef DEBUG_STM32_DAC
+#define DEBUG_STM32_DAC 1
+#endif
 
 #ifdef DEBUG_STM32_DAC
 #define DPRINTF(fmt, ...)                                       \
@@ -406,36 +409,37 @@ static uint64_t stm32_dac_read(void *opaque, hwaddr offset,
 {
   
     Stm32Dac *s = (Stm32Dac *)opaque;
+    uint64_t res;
 
     switch (offset & 0xffffffff) {
 
        
         case DAC_CR_OFFSET:
-            return s->DAC_CR; 
+            res = s->DAC_CR;  DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_SWTRIGR_OFFSET:
-            return s->DAC_SWTRIGR;
+            res = s->DAC_SWTRIGR; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12R1_OFFSET:
-            return s->DAC_DHR12R1;
+            res = s->DAC_DHR12R1; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12L1_OFFSET:
-            return s->DAC_DHR12L1;
+            res = s->DAC_DHR12L1; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR8R1_OFFSET:
-            return s->DAC_DHR8R1;
+            res = s->DAC_DHR8R1; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12R2_OFFSET:
-            return s->DAC_DHR12R2;
+            res = s->DAC_DHR12R2; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12L2_OFFSET:
-            return s->DAC_DHR12L2;
+            res = s->DAC_DHR12L2; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR8R2_OFFSET:
-	    return s->DAC_DHR8R2;
+	          res = s->DAC_DHR8R2; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12RD_OFFSET:
-            return s->DAC_DHR12RD;
+            res = s->DAC_DHR12RD; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR12LD_OFFSET:
-            return s->DAC_DHR12LD;
+            res = s->DAC_DHR12LD; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DHR8RD_OFFSET:
-            return s->DAC_DHR8RD;
+            res = s->DAC_DHR8RD; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DOR1_OFFSET:
-	    return s->DAC_DOR1;
+	          res = s->DAC_DOR1; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
         case DAC_DOR2_OFFSET:
-	    return s->DAC_DOR2;
+	          res = s->DAC_DOR2; DPRINTF("read %lx %lx\n", offset & 0xffffffff, res); return res;
 
         default:
             STM32_BAD_REG(offset, size);
@@ -448,6 +452,8 @@ static void stm32_dac_write(void *opaque, hwaddr offset,
 { 
 
       Stm32Dac *s = (Stm32Dac *)opaque;
+
+    DPRINTF("write %lx %lx\n", offset & 0xffffffff, value);
 
     switch (offset & 0xffffffff) {
        
